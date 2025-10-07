@@ -180,44 +180,69 @@ const DashboardHome: React.FC<{ onNavigate: (view: View) => void }> = ({ onNavig
 
 
 const SubjectSelection: React.FC<{ onSelectSubject: (subjectKey: keyof SubjectsData) => void; onBack: () => void; }> = ({ onSelectSubject, onBack }) => (
-      <div className="max-w-4xl mx-auto px-4 animate-in fade-in duration-500">
-          <Button onClick={onBack} className="mb-8 bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2">
-              <ArrowLeft size={16} /> Back to Dashboard
-          </Button>
-          <h1 className="text-4xl text-center text-gray-800 font-bold mb-2">Choose a Subject</h1>
-          <p className="text-xl text-center text-gray-600 mb-12">What would you like to learn today?</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <Card onClick={() => onSelectSubject('english')} className="p-6 border-amber-400 bg-amber-50 hover:bg-amber-100 cursor-pointer">
-                  <h2 className="text-3xl font-bold text-amber-700 mb-3">English Fun</h2>
-                  <p className="text-lg text-gray-700">{subjectsData.english.description}</p>
-              </Card>
-              <Card onClick={() => onSelectSubject('maths')} className="p-6 border-sky-400 bg-sky-50 hover:bg-sky-100 cursor-pointer">
-                  <h2 className="text-3xl font-bold text-sky-700 mb-3">Math Adventures</h2>
-                  <p className="text-lg text-gray-700">{subjectsData.maths.description}</p>
-              </Card>
-          </div>
-      </div>
-);
-
-const GameSelection: React.FC<{ onStartGame: (game: 'english-game' | 'maths-game') => void; onBack: () => void; }> = ({ onStartGame, onBack }) => (
-     <div className="max-w-4xl mx-auto px-4 animate-in fade-in duration-500">
+    <div className="max-w-4xl mx-auto px-4 animate-in fade-in duration-500">
          <Button onClick={onBack} className="mb-8 bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2">
             <ArrowLeft size={16} /> Back to Dashboard
         </Button>
-        <h1 className="text-4xl text-center text-gray-800 font-bold mb-2">Choose a Game</h1>
-         <p className="text-xl text-center text-gray-600 mb-12">Let's play and learn!</p>
+        <h1 className="text-4xl text-center text-gray-800 font-bold mb-2">Choose a Subject</h1>
+         <p className="text-xl text-center text-gray-600 mb-12">What would you like to learn today?</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <Card onClick={() => onStartGame('english-game')} className="p-6 border-rose-400 bg-rose-50 hover:bg-rose-100 cursor-pointer">
-                <h2 className="text-3xl font-bold text-rose-700 mb-3">Letter Match</h2>
-                <p className="text-lg text-gray-700">Match the letter to the right picture!</p>
+            <Card onClick={() => onSelectSubject('english')} className="p-6 border-amber-400 bg-amber-50 hover:bg-amber-100 cursor-pointer">
+                <h2 className="text-3xl font-bold text-amber-700 mb-3">English Fun</h2>
+                <p className="text-lg text-gray-700">{subjectsData.english.description}</p>
             </Card>
-            <Card onClick={() => onStartGame('maths-game')} className="p-6 border-green-400 bg-green-50 hover:bg-green-100 cursor-pointer">
-                <h2 className="text-3xl font-bold text-green-700 mb-3">Number Catch</h2>
-                <p className="text-lg text-gray-700">Catch the falling numbers!</p>
+            <Card onClick={() => onSelectSubject('maths')} className="p-6 border-sky-400 bg-sky-50 hover:bg-sky-100 cursor-pointer">
+                <h2 className="text-3xl font-bold text-sky-700 mb-3">Math Adventures</h2>
+                <p className="text-lg text-gray-700">{subjectsData.maths.description}</p>
             </Card>
         </div>
     </div>
 );
+
+const GameSelection: React.FC<{ 
+    onStartGame: (game: 'english-game' | 'maths-game') => void; 
+    onBack: () => void;
+    gameTimeRemaining: number;
+    playtimeCooldownEnd: number | null;
+}> = ({ onStartGame, onBack, gameTimeRemaining, playtimeCooldownEnd }) => {
+    const formatTime = (seconds: number) => new Date(seconds * 1000).toISOString().substr(14, 5);
+
+    const CooldownMessage = () => {
+        if (!playtimeCooldownEnd) return null;
+        const remaining = Math.round((playtimeCooldownEnd - Date.now()) / 1000);
+        return (
+            <div className="text-center mt-6 p-4 bg-red-100 text-red-700 rounded-lg border border-red-200">
+                <p className="text-xl font-bold">Games are resting! Come back in {formatTime(remaining > 0 ? remaining : 0)}.</p>
+            </div>
+        );
+    };
+
+    return (
+        <div className="max-w-4xl mx-auto px-4 animate-in fade-in duration-500">
+            <Button onClick={onBack} className="mb-8 bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2">
+                <ArrowLeft size={16} /> Back to Dashboard
+            </Button>
+            <h1 className="text-4xl text-center text-gray-800 font-bold mb-2">Choose a Game</h1>
+            <p className="text-xl text-center text-gray-600 mb-8">Let's play and learn!</p>
+
+            <div className="text-center mb-6 p-3 bg-white rounded-lg shadow-sm border max-w-sm mx-auto">
+                <p className="text-2xl">Play Time Remaining: <span className="font-bold text-teal-600">{formatTime(gameTimeRemaining)}</span></p>
+            </div>
+
+            <div className={clsx("grid grid-cols-1 md:grid-cols-2 gap-8", { "opacity-50 pointer-events-none": !!playtimeCooldownEnd })}>
+                <Card onClick={() => onStartGame('english-game')} className="p-6 border-rose-400 bg-rose-50 hover:bg-rose-100 cursor-pointer">
+                    <h2 className="text-3xl font-bold text-rose-700 mb-3">Letter Match</h2>
+                    <p className="text-lg text-gray-700">Match the letter to the right picture!</p>
+                </Card>
+                <Card onClick={() => onStartGame('maths-game')} className="p-6 border-green-400 bg-green-50 hover:bg-green-100 cursor-pointer">
+                    <h2 className="text-3xl font-bold text-green-700 mb-3">Number Catch</h2>
+                    <p className="text-lg text-gray-700">Catch the falling numbers!</p>
+                </Card>
+            </div>
+            <CooldownMessage />
+        </div>
+    );
+};
 
 
 const ModuleSelection: React.FC<{ subject: Subject; onStartModule: (deck: CardData[]) => void; onBack: () => void; }> = ({ subject, onStartModule, onBack }) => (
@@ -290,61 +315,38 @@ const EnglishGame: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
     const generateQuiz = async () => {
         setGameState('loading');
-        
-        // 1. Ensure the API key is being read correctly.
         const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-
-        // Check if the API key is missing
         if (!apiKey) {
-            console.error("Gemini API key is missing. Make sure it's in your .env.local file.");
+            console.error("Gemini API key is missing.");
             setGameState('error');
             return;
         }
 
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
-        // 2. Simplified prompt to explicitly ask for raw JSON.
         const prompt = "Generate a JSON array of 10 unique quiz questions for a 'letter match' game. Each object must have 'letter', 'correct', and 'options' properties. The two distractor nouns in 'options' MUST NOT start with the question's 'letter'. All words must be for a 5-7 year old. IMPORTANT: Respond ONLY with the raw JSON array, without any surrounding text or markdown formatting.";
 
-        // 3. Simplified payload without the 'generationConfig' and 'responseSchema'.
-        const payload = {
-            contents: [{ parts: [{ text: prompt }] }],
-        };
+        const payload = { contents: [{ parts: [{ text: prompt }] }] };
 
         try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            // Added more detailed error logging
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!response.ok) {
                 const errorBody = await response.json();
                 console.error("API Error Response:", errorBody);
                 throw new Error(`API Error: ${response.status}`);
             }
-
             const result = await response.json();
             const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-            
             if (jsonText) {
-                // The response might still have markdown backticks, so we clean them
                 const cleanedJsonText = jsonText.replace(/^```json\n/, '').replace(/\n```$/, '');
                 const parsedQuestions = JSON.parse(cleanedJsonText);
-                
                 if (Array.isArray(parsedQuestions) && parsedQuestions.length > 0) {
                     setQuestions(parsedQuestions);
                     setQuestionIndex(0);
                     setScore(0);
                     setFeedback(null);
                     setGameState('active');
-                } else {
-                    throw new Error("Invalid question format received.");
-                }
-            } else {
-                throw new Error("No questions generated in the response.");
-            }
+                } else { throw new Error("Invalid question format received."); }
+            } else { throw new Error("No questions generated in the response."); }
         } catch (error) {
             console.error("Failed to generate or parse quiz:", error);
             setGameState('error');
@@ -522,8 +524,63 @@ export function ChildDashboard() {
     const [currentDeck, setCurrentDeck] = useState<CardData[]>([]);
     const [selectedSubjectKey, setSelectedSubjectKey] = useState<keyof SubjectsData | null>(null);
 
+    const PLAY_TIME_SECONDS = 300; // 5 minutes
+    const COOLDOWN_SECONDS = 1800; // 30 minutes
+    const [gameTimeRemaining, setGameTimeRemaining] = useState(PLAY_TIME_SECONDS);
+    const [isGameTimerRunning, setIsGameTimerRunning] = useState(false);
+    const [playtimeCooldownEnd, setPlaytimeCooldownEnd] = useState<number | null>(null);
+
+    const gameTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const cooldownTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        if (isGameTimerRunning && gameTimeRemaining > 0) {
+            gameTimerIntervalRef.current = setInterval(() => {
+                setGameTimeRemaining(prev => prev - 1);
+            }, 1000);
+        } else if (gameTimeRemaining <= 0) {
+            if (gameTimerIntervalRef.current) clearInterval(gameTimerIntervalRef.current);
+            setIsGameTimerRunning(false);
+            setPlaytimeCooldownEnd(Date.now() + COOLDOWN_SECONDS * 1000);
+            setCurrentView('game-selection'); 
+        }
+        return () => {
+            if (gameTimerIntervalRef.current) clearInterval(gameTimerIntervalRef.current);
+        };
+    }, [isGameTimerRunning, gameTimeRemaining]);
+
+    useEffect(() => {
+        if (playtimeCooldownEnd) {
+            cooldownTimerIntervalRef.current = setInterval(() => {
+                if (Date.now() >= playtimeCooldownEnd) {
+                    setPlaytimeCooldownEnd(null);
+                    setGameTimeRemaining(PLAY_TIME_SECONDS);
+                    if(cooldownTimerIntervalRef.current) clearInterval(cooldownTimerIntervalRef.current);
+                } else {
+                    setPlaytimeCooldownEnd(p => p);
+                }
+            }, 1000);
+        }
+        return () => {
+            if (cooldownTimerIntervalRef.current) clearInterval(cooldownTimerIntervalRef.current);
+        };
+    }, [playtimeCooldownEnd]);
+
     const handleNavigate = (view: View) => {
         setCurrentView(view);
+    };
+
+     const handleStartGame = (game: 'english-game' | 'maths-game') => {
+        if (playtimeCooldownEnd || gameTimeRemaining <= 0) return;
+        if (!isGameTimerRunning) {
+            setIsGameTimerRunning(true);
+        }
+        setCurrentView(game);
+    };
+    
+    const handleCloseGame = () => {
+        setIsGameTimerRunning(false);
+        setCurrentView('game-selection');
     };
 
     const renderView = () => {
@@ -537,11 +594,16 @@ export function ChildDashboard() {
             case 'module':
                 return <LearningModule deck={currentDeck} onClose={() => setCurrentView('module-selection')} />;
             case 'game-selection':
-                return <GameSelection onStartGame={(game) => setCurrentView(game)} onBack={() => setCurrentView('child-home')} />
+                return <GameSelection 
+                            onStartGame={handleStartGame} 
+                            onBack={() => setCurrentView('child-home')}
+                            gameTimeRemaining={gameTimeRemaining}
+                            playtimeCooldownEnd={playtimeCooldownEnd}
+                        />
             case 'english-game':
-                return <EnglishGame onClose={() => setCurrentView('game-selection')} />;
+                return <EnglishGame onClose={handleCloseGame} />;
             case 'maths-game':
-                return <MathsGame onClose={() => setCurrentView('game-selection')} />;
+                return <MathsGame onClose={handleCloseGame} />;
             default:
                 return <DashboardHome onNavigate={handleNavigate} />;
         }
