@@ -1,369 +1,556 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import {
-  Star,
-  Play,
-  BookOpen,
-  Gamepad2,
-  Award,
-  Settings,
-  LogOut,
-  Smile,
-  Meh,
-  Frown,
-  Heart,
-  User,
-  Volume2,
-  HelpCircle,
-  Sparkles,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Volume2, Star, Gamepad2, Settings, LogOut, Smile, Meh, Frown, Heart, User, HelpCircle, Sparkles } from "lucide-react";
+import { clsx } from 'clsx';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-export function ChildDashboard() {
-  const [selectedMood, setSelectedMood] = useState<string | null>(null)
-  const [clickedButton, setClickedButton] = useState<string | null>(null)
-  const [xpCount, setXpCount] = useState(1250)
+// --- TYPE DEFINITIONS ---
+type View = 'child-home' | 'module-selection' | 'module' | 'game-selection' | 'english-game' | 'maths-game';
 
-  const moods = [
-    { emoji: "😊", label: "Happy", value: "happy", icon: Smile, color: "bg-green-100 hover:bg-green-200" },
-    { emoji: "😐", label: "Okay", value: "okay", icon: Meh, color: "bg-yellow-100 hover:bg-yellow-200" },
-    { emoji: "😢", label: "Sad", value: "sad", icon: Frown, color: "bg-blue-100 hover:bg-blue-200" },
-  ]
-
-  const mainActivities = [
-    {
-      title: "Start Learning",
-      description: "Begin your magical learning adventure!",
-      icon: Star,
-      emoji: "🎓",
-      color: "bg-gradient-to-br from-yellow-400 via-orange-400 to-red-500",
-      hoverColor: "hover:from-yellow-300 hover:via-orange-300 hover:to-red-400",
-      textColor: "text-white",
-      size: "large",
-      tooltip: "Start your personalized learning path with fun activities!",
-    },
-    {
-      title: "Watch a Video",
-      description: "Fun educational videos just for you",
-      icon: Play,
-      emoji: "📺",
-      color: "bg-gradient-to-br from-red-400 via-pink-400 to-purple-500",
-      hoverColor: "hover:from-red-300 hover:via-pink-300 hover:to-purple-400",
-      textColor: "text-white",
-      size: "medium",
-      tooltip: "Watch safe and fun educational videos!",
-    },
-    {
-      title: "Play a Game",
-      description: "Interactive puzzles and quizzes!",
-      icon: Gamepad2,
-      emoji: "🧩",
-      color: "bg-gradient-to-br from-green-400 via-teal-400 to-blue-500",
-      hoverColor: "hover:from-green-300 hover:via-teal-300 hover:to-blue-400",
-      textColor: "text-white",
-      size: "medium",
-      tooltip: "Play fun games while learning new things!",
-    },
-    {
-      title: "Story Time",
-      description: "Listen to amazing stories with read-along",
-      icon: BookOpen,
-      emoji: "📖",
-      color: "bg-gradient-to-br from-purple-400 via-indigo-400 to-blue-500",
-      hoverColor: "hover:from-purple-300 hover:via-indigo-300 hover:to-blue-400",
-      textColor: "text-white",
-      size: "medium",
-      tooltip: "Listen to stories with word highlighting and voice reading!",
-    },
-    {
-      title: "My Rewards",
-      description: "See all your awesome badges and stickers!",
-      icon: Award,
-      emoji: "🏅",
-      color: "bg-gradient-to-br from-amber-400 via-yellow-400 to-orange-500",
-      hoverColor: "hover:from-amber-300 hover:via-yellow-300 hover:to-orange-400",
-      textColor: "text-white",
-      size: "medium",
-      tooltip: "Check out all the cool badges and stickers you've earned!",
-    },
-  ]
-
-  const handleButtonClick = (buttonName: string) => {
-    setClickedButton(buttonName)
-    // Add XP for interaction
-    setXpCount((prev) => prev + 5)
-
-    // Reset animation after a short delay
-    setTimeout(() => setClickedButton(null), 300)
-  }
-
-  return (
-    <TooltipProvider>
-      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-50 to-pink-100">
-        {/* Top Navigation */}
-        <nav className="bg-white shadow-lg border-b-4 border-rainbow-gradient p-4 sticky top-16 z-40">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="text-4xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-pulse">
-                🌟 VidyaSetu
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-6">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center space-x-2 bg-gradient-to-r from-yellow-100 to-orange-100 px-6 py-3 rounded-full border-3 border-yellow-300 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <Sparkles className="h-7 w-7 text-yellow-600 animate-spin" />
-                    <span className="text-2xl font-black text-yellow-700">{xpCount}</span>
-                    <span className="text-lg font-bold text-yellow-600">XP</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-lg">Your experience points! Keep learning to earn more! ⭐</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center space-x-3 bg-gradient-to-r from-blue-100 to-purple-100 px-6 py-3 rounded-full border-3 border-blue-300 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <div className="w-12 h-12 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center animate-bounce">
-                      <User className="h-7 w-7 text-white" />
-                    </div>
-                    <span className="text-xl font-bold text-blue-700">Alex</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-lg">Your profile - that's you! 👋</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-        </nav>
-
-        <div className="max-w-7xl mx-auto p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Main Content Area */}
-            <div className="lg:col-span-3">
-              <div className="mb-8 text-center lg:text-left">
-                <h1 className="text-5xl font-black text-gray-800 mb-4 animate-fade-in">Welcome back, Alex! 🎉</h1>
-                <p className="text-2xl text-gray-600 font-semibold">Ready for another amazing learning adventure?</p>
-              </div>
-
-              {/* Main Activities Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {mainActivities.map((activity, index) => {
-                  const IconComponent = activity.icon
-                  const isLarge = activity.size === "large"
-                  const isClicked = clickedButton === activity.title
-
-                  return (
-                    <Tooltip key={activity.title}>
-                      <TooltipTrigger asChild>
-                        <Card
-                          className={`${isLarge ? "md:col-span-2 lg:col-span-2" : ""} 
-                            ${activity.color} ${activity.hoverColor} ${activity.textColor}
-                            hover:scale-110 transition-all duration-500 cursor-pointer 
-                            border-4 border-white shadow-2xl hover:shadow-3xl
-                            ${isClicked ? "scale-95 shadow-inner" : ""}
-                            transform-gpu will-change-transform`}
-                          onClick={() => handleButtonClick(activity.title)}
-                        >
-                          <CardContent className={`p-10 ${isLarge ? "text-center" : ""}`}>
-                            <div className="flex flex-col items-center space-y-6">
-                              <div
-                                className={`${isLarge ? "w-24 h-24" : "w-20 h-20"} 
-                                bg-white bg-opacity-30 rounded-full flex items-center justify-center
-                                hover:bg-opacity-40 transition-all duration-300 hover:rotate-12`}
-                              >
-                                <span className={`${isLarge ? "text-5xl" : "text-4xl"}`}>{activity.emoji}</span>
-                              </div>
-                              <div>
-                                <h3 className={`${isLarge ? "text-4xl" : "text-3xl"} font-black mb-3`}>
-                                  {activity.title}
-                                </h3>
-                                <p className={`${isLarge ? "text-xl" : "text-lg"} opacity-90 font-semibold`}>
-                                  {activity.description}
-                                </p>
-                              </div>
-                              {activity.title === "Start Learning" && (
-                                <Button
-                                  size="lg"
-                                  className="bg-white text-orange-600 hover:bg-gray-100 font-black text-xl px-10 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                                >
-                                  Let's Go! 🚀
-                                </Button>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-lg font-semibold">{activity.tooltip}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )
-                })}
-              </div>
-
-              {/* Recent Achievements */}
-              <div className="mt-12">
-                <h2 className="text-3xl font-black text-gray-800 mb-6 flex items-center">
-                  🏆 Recent Achievements
-                  <Sparkles className="ml-3 h-8 w-8 text-yellow-500 animate-pulse" />
-                </h2>
-                <div className="flex flex-wrap gap-4">
-                  {["Math Star ⭐", "Reading Hero 📚", "Story Master 📖", "Game Champion 🎮"].map((badge, index) => (
-                    <Badge
-                      key={badge}
-                      className="text-xl py-3 px-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 animate-bounce"
-                      style={{ animationDelay: `${index * 0.2}s` }}
-                    >
-                      {badge}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-8">
-              {/* Mood Tracker */}
-              <Card className="border-4 border-pink-300 shadow-xl hover:shadow-2xl transition-all duration-300">
-                <CardContent className="p-8">
-                  <h3 className="text-2xl font-black text-gray-800 mb-6 flex items-center">
-                    <Heart className="h-7 w-7 text-pink-500 mr-3 animate-pulse" />
-                    How do you feel today?
-                  </h3>
-                  <div className="grid grid-cols-1 gap-4">
-                    {moods.map((mood) => (
-                      <Tooltip key={mood.value}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant={selectedMood === mood.value ? "default" : "outline"}
-                            className={`h-20 flex items-center justify-start text-xl font-bold px-6
-                              ${mood.color} border-3 transition-all duration-300 hover:scale-105
-                              ${
-                                selectedMood === mood.value
-                                  ? "bg-gradient-to-r from-pink-400 to-purple-500 text-white border-pink-300 shadow-lg"
-                                  : "hover:shadow-md"
-                              }`}
-                            onClick={() => setSelectedMood(mood.value)}
-                          >
-                            <span className="text-3xl mr-4">{mood.emoji}</span>
-                            <span className="text-lg">{mood.label}</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="text-lg">Tell us how you're feeling today!</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Quick Actions */}
-              <Card className="border-4 border-blue-300 shadow-xl hover:shadow-2xl transition-all duration-300">
-                <CardContent className="p-8">
-                  <h3 className="text-2xl font-black text-gray-800 mb-6">Quick Actions</h3>
-                  <div className="space-y-4">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start text-xl py-6 hover:bg-blue-50 bg-transparent border-3 border-blue-200 hover:border-blue-300 transition-all duration-300 hover:scale-105 font-bold"
-                        >
-                          <Settings className="h-6 w-6 mr-4" />
-                          Settings ⚙️
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-md">
-                        <DialogHeader>
-                          <DialogTitle className="text-2xl font-bold">Settings ⚙️</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 p-4">
-                          <Button className="w-full text-lg py-3 bg-transparent" variant="outline">
-                            🔊 Sound Settings
-                          </Button>
-                          <Button className="w-full text-lg py-3 bg-transparent" variant="outline">
-                            🎨 Theme Colors
-                          </Button>
-                          <Button className="w-full text-lg py-3 bg-transparent" variant="outline">
-                            📱 Accessibility
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start text-xl py-6 hover:bg-blue-50 bg-transparent border-3 border-blue-200 hover:border-blue-300 transition-all duration-300 hover:scale-105 font-bold"
-                        >
-                          <Volume2 className="h-6 w-6 mr-4" />
-                          Sound On/Off 🔊
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-lg">Turn sounds on or off</p>
-                      </TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start text-xl py-6 hover:bg-blue-50 bg-transparent border-3 border-blue-200 hover:border-blue-300 transition-all duration-300 hover:scale-105 font-bold"
-                        >
-                          <HelpCircle className="h-6 w-6 mr-4" />
-                          Help & Tips 💡
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-lg">Get help and learn tips!</p>
-                      </TooltipContent>
-                    </Tooltip>
-
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-xl py-6 hover:bg-red-50 text-red-600 bg-transparent border-3 border-red-200 hover:border-red-300 transition-all duration-300 hover:scale-105 font-bold"
-                    >
-                      <LogOut className="h-6 w-6 mr-4" />
-                      Logout 🔓
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Today's Goal */}
-              <Card className="border-4 border-green-300 shadow-xl hover:shadow-2xl transition-all duration-300">
-                <CardContent className="p-8">
-                  <h3 className="text-2xl font-black text-gray-800 mb-6">Today's Goal 🎯</h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xl font-bold">Learning Time</span>
-                      <span className="font-black text-green-600 text-xl">15/30 min</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-6 shadow-inner">
-                      <div
-                        className="bg-gradient-to-r from-green-400 to-blue-500 h-6 rounded-full transition-all duration-1000 shadow-lg"
-                        style={{ width: "50%" }}
-                      ></div>
-                    </div>
-                    <p className="text-lg text-gray-600 font-semibold">Great job! You're halfway there! 🌟</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </div>
-    </TooltipProvider>
-  )
+interface CardData {
+    image: string;
+    text: string;
+    simpleText: string;
 }
+
+interface EnglishQuestion {
+    letter: string;
+    correct: string;
+    options: string[];
+}
+
+interface Module {
+    title: string;
+    description: string;
+    deck: CardData[];
+}
+
+interface Subject {
+    title: string;
+    description: string;
+    modules: Module[];
+    borderColor: string;
+    textColor: string;
+    bgColor: string;
+    hoverBgColor: string;
+}
+
+type SubjectsData = {
+    english: Subject;
+    maths: Subject;
+}
+
+// --- DATA CONSTANTS ---
+const lettersDeck: CardData[] = [
+    { image: 'https://placehold.co/400x200/FFC8DD/000000?text=Aa+-+Apple', text: 'A', simpleText: 'A is for Apple.' },
+    { image: 'https://placehold.co/400x200/A2D2FF/000000?text=Bb+-+Ball', text: 'B', simpleText: 'B is for Ball.' },
+    { image: 'https://placehold.co/400x200/BDE0FE/000000?text=Cc+-+Cat', text: 'C', simpleText: 'C is for Cat.' },
+    { image: 'https://placehold.co/400x200/CDB4DB/000000?text=Dd+-+Dog', text: 'D', simpleText: 'D is for Dog.' },
+    { image: 'https://placehold.co/400x200/FFADAD/000000?text=Ee+-+Elephant', text: 'E', simpleText: 'E is for Elephant.' },
+    { image: 'https://placehold.co/400x200/FFD6A5/000000?text=Ff+-+Fish', text: 'F', simpleText: 'F is for Fish.' },
+    { image: 'https://placehold.co/400x200/FDFFB6/000000?text=Gg+-+Goat', text: 'G', simpleText: 'G is for Goat.' },
+    { image: 'https://placehold.co/400x200/CAFFBF/000000?text=Hh+-+Hat', text: 'H', simpleText: 'H is for Hat.' },
+    { image: 'https://placehold.co/400x200/9BF6FF/000000?text=Ii+-+Igloo', text: 'I', simpleText: 'I is for Igloo.' },
+    { image: 'https://placehold.co/400x200/A0C4FF/000000?text=Jj+-+Jar', text: 'J', simpleText: 'J is for Jar.' },
+    { image: 'https://placehold.co/400x200/BDB2FF/000000?text=Kk+-+Kite', text: 'K', simpleText: 'K is for Kite.' },
+    { image: 'https://placehold.co/400x200/FFB3DE/000000?text=Ll+-+Lion', text: 'L', simpleText: 'L is for Lion.' },
+    { image: 'https://placehold.co/400x200/FFC8DD/000000?text=Mm+-+Mouse', text: 'M', simpleText: 'M is for Mouse.' },
+    { image: 'https://placehold.co/400x200/A2D2FF/000000?text=Nn+-+Nest', text: 'N', simpleText: 'N is for Nest.' },
+    { image: 'https://placehold.co/400x200/BDE0FE/000000?text=Oo+-+Octopus', text: 'O', simpleText: 'O is for Octopus.' },
+    { image: 'https://placehold.co/400x200/CDB4DB/000000?text=Pp+-+Pig', text: 'P', simpleText: 'P is for Pig.' },
+    { image: 'https://placehold.co/400x200/FFADAD/000000?text=Qq+-+Queen', text: 'Q', simpleText: 'Q is for Queen.' },
+    { image: 'https://placehold.co/400x200/FFD6A5/000000?text=Rr+-+Rabbit', text: 'R', simpleText: 'R is for Rabbit.' },
+    { image: 'https://placehold.co/400x200/FDFFB6/000000?text=Ss+-+Sun', text: 'S', simpleText: 'S is for Sun.' },
+    { image: 'https://placehold.co/400x200/CAFFBF/000000?text=Tt+-+Tiger', text: 'T', simpleText: 'T is for Tiger.' },
+    { image: 'https://placehold.co/400x200/9BF6FF/000000?text=Uu+-+Umbrella', text: 'U', simpleText: 'U is for Umbrella.' },
+    { image: 'https://placehold.co/400x200/A0C4FF/000000?text=Vv+-+Vase', text: 'V', simpleText: 'V is for Vase.' },
+    { image: 'https://placehold.co/400x200/BDB2FF/000000?text=Ww+-+Whale', text: 'W', simpleText: 'W is for Whale.' },
+    { image: 'https://placehold.co/400x200/FFB3DE/000000?text=Xx+-+Xylophone', text: 'X', simpleText: 'X is for Xylophone.' },
+    { image: 'https://placehold.co/400x200/FFC8DD/000000?text=Yy+-+Yak', text: 'Y', simpleText: 'Y is for Yak.' },
+    { image: 'https://placehold.co/400x200/A2D2FF/000000?text=Zz+-+Zebra', text: 'Z', simpleText: 'Z is for Zebra.' },
+];
+
+const numbersDeck: CardData[] = [
+    { image: 'https://placehold.co/400x200/E5E5E5/000000?text=0', text: 'Zero', simpleText: 'This is the number zero.' },
+    { image: 'https://placehold.co/400x200/D4A373/FFFFFF?text=1', text: 'One', simpleText: 'This is the number one.' },
+    { image: 'https://placehold.co/400x200/A3B18A/FFFFFF?text=2', text: 'Two', simpleText: 'This is the number two.' },
+    { image: 'https://placehold.co/400x200/588157/FFFFFF?text=3', text: 'Three', simpleText: 'This is the number three.' },
+    { image: 'https://placehold.co/400x200/3A5A40/FFFFFF?text=4', text: 'Four', simpleText: 'This is the number four.' },
+    { image: 'https://placehold.co/400x200/344E41/FFFFFF?text=5', text: 'Five', simpleText: 'This is the number five.' },
+    { image: 'https://placehold.co/400x200/F4A261/FFFFFF?text=6', text: 'Six', simpleText: 'This is the number six.' },
+    { image: 'https://placehold.co/400x200/E76F51/FFFFFF?text=7', text: 'Seven', simpleText: 'This is the number seven.' },
+    { image: 'https://placehold.co/400x200/DDA15E/FFFFFF?text=8', text: 'Eight', simpleText: 'This is the number eight.' },
+    { image: 'https://placehold.co/400x200/BC6C25/FFFFFF?text=9', text: 'Nine', simpleText: 'This is the number nine.' },
+];
+
+const verbsDeck: CardData[] = [ { image: 'https://placehold.co/400x200/FFADAD/000000?text=Run', text: 'Run', simpleText: 'The girl can run very fast.' }, { image: 'https://placehold.co/400x200/FFD6A5/000000?text=Jump', text: 'Jump', simpleText: 'Frogs can jump high.' }, { image: 'https://placehold.co/400x200/FDFFB6/000000?text=Read', text: 'Read', simpleText: 'He loves to read books.' }, { image: 'https://placehold.co/400x200/CAFFBF/000000?text=Sing', text: 'Sing', simpleText: 'She likes to sing a song.' }, { image: 'https://placehold.co/400x200/9BF6FF/000000?text=Eat', text: 'Eat', simpleText: 'It is time to eat lunch.' }, ];
+const adjectivesDeck: CardData[] = [ { image: 'https://placehold.co/400x200/FFC8DD/000000?text=Big', text: 'Big', simpleText: 'The elephant is big.' }, { image: 'https://placehold.co/400x200/A2D2FF/000000?text=Small', text: 'Small', simpleText: 'The mouse is small.' }, { image: 'https://placehold.co/400x200/BDE0FE/000000?text=Happy', text: 'Happy', simpleText: 'The smiley face is happy.' }, { image: 'https://placehold.co/400x200/CDB4DB/000000?text=Sad', text: 'Sad', simpleText: 'The crying child is sad.' }, { image: 'https://placehold.co/400x200/FFC8DD/000000?text=Red', text: 'Red', simpleText: 'The apple is red.' }, ];
+const additionDeck: CardData[] = [ { image: 'https://placehold.co/400x200/D4A373/FFFFFF?text=1%2B1=2', text: '1 + 1 = 2', simpleText: 'One plus one equals two.' }, { image: 'https://placehold.co/400x200/A3B18A/FFFFFF?text=2%2B1=3', text: '2 + 1 = 3', simpleText: 'Two plus one equals three.' }, { image: 'https://placehold.co/400x200/588157/FFFFFF?text=2%2B2=4', text: '2 + 2 = 4', simpleText: 'Two plus two equals four.' }, { image: 'https://placehold.co/400x200/3A5A40/FFFFFF?text=3%2B2=5', text: '3 + 2 = 5', simpleText: 'Three plus two equals five.' }, { image: 'https://placehold.co/400x200/344E41/FFFFFF?text=4%2B1=5', text: '4 + 1 = 5', simpleText: 'Four plus one equals five.' }, ];
+const subtractionDeck: CardData[] = [ { image: 'https://placehold.co/400x200/D4A373/FFFFFF?text=2-1=1', text: '2 - 1 = 1', simpleText: 'Two minus one equals one.' }, { image: 'https://placehold.co/400x200/A3B18A/FFFFFF?text=3-1=2', text: '3 - 1 = 2', simpleText: 'Three minus one equals two.' }, { image: 'https://placehold.co/400x200/588157/FFFFFF?text=4-2=2', text: '4 - 2 = 2', simpleText: 'Four minus two equals two.' }, { image: 'https://placehold.co/400x200/3A5A40/FFFFFF?text=5-3=2', text: '5 - 3 = 2', simpleText: 'Five minus three equals two.' }, { image: 'https://placehold.co/400x200/344E41/FFFFFF?text=5-1=4', text: '5 - 1 = 4', simpleText: 'Five minus one equals four.' }, ];
+const multiplicationDeck: CardData[] = [ { image: 'https://placehold.co/400x200/F4A261/FFFFFF?text=2x1=2', text: '2 x 1 = 2', simpleText: 'Two times one equals two.' }, { image: 'https://placehold.co/400x200/E76F51/FFFFFF?text=2x2=4', text: '2 x 2 = 4', simpleText: 'Two times two equals four.' }, { image: 'https://placehold.co/400x200/DDA15E/FFFFFF?text=3x2=6', text: '3 x 2 = 6', simpleText: 'Three times two equals six.' }, { image: 'https://placehold.co/400x200/BC6C25/FFFFFF?text=4x2=8', text: '4 x 2 = 8', simpleText: 'Four times two equals eight.' }, { image: 'https://placehold.co/400x200/606C38/FFFFFF?text=5x2=10', text: '5 x 2 = 10', simpleText: 'Five times two equals ten.' }, ];
+const divisionDeck: CardData[] = [ { image: 'https://placehold.co/400x200/F4A261/FFFFFF?text=4%C3%B72=2', text: '4 ÷ 2 = 2', simpleText: 'Four divided by two is two.' }, { image: 'https://placehold.co/400x200/E76F51/FFFFFF?text=6%C3%B72=3', text: '6 ÷ 2 = 3', simpleText: 'Six divided by two is three.' }, { image: 'https://placehold.co/400x200/DDA15E/FFFFFF?text=8%C3%B74=2', text: '8 ÷ 4 = 2', simpleText: 'Eight divided by four is two.' }, { image: 'https://placehold.co/400x200/BC6C25/FFFFFF?text=9%C3%B73=3', text: '9 ÷ 3 = 3', simpleText: 'Nine divided by three is three.' }, { image: 'https://placehold.co/400x200/606C38/FFFFFF?text=10%C3%B72=5', text: '10 ÷ 2 = 5', simpleText: 'Ten divided by two is five.' }, ];
+
+const subjectsData: SubjectsData = {
+    english: { title: "English Fun", description: "Learn letters, sounds, and first words. It's as easy as A-B-C!", borderColor: "border-amber-400", textColor: "text-amber-700", bgColor: "bg-amber-50", hoverBgColor: "hover:bg-amber-100", modules: [ { title: "Learn Letters", description: "Master the alphabet from A to Z.", deck: lettersDeck }, { title: "Learn Verbs", description: "Discover action words like run, jump, and sing.", deck: verbsDeck }, { title: "Learn Adjectives", description: "Describe the world with words like big, small, and happy.", deck: adjectivesDeck } ] },
+    maths: { title: "Math Adventures", description: "Let's count numbers and have fun with shapes!", borderColor: "border-sky-400", textColor: "text-sky-700", bgColor: "bg-sky-50", hoverBgColor: "hover:bg-sky-100", modules: [ { title: "Learn Numbers", description: "Get to know numbers from zero to nine.", deck: numbersDeck }, { title: "Addition", description: "Learn how to add numbers together.", deck: additionDeck }, { title: "Subtraction", description: "Practice taking numbers away.", deck: subtractionDeck }, { title: "Multiplication", description: "Start multiplying with simple examples.", deck: multiplicationDeck }, { title: "Division", description: "Understand how to share things equally.", deck: divisionDeck } ] }
+};
+
+const gameOverMessages: string[] = ["Great try! Every game helps you learn.", "Awesome effort! Ready for another round?", "You did great! Practice makes perfect.", "Wow, you were so close! Let's play again!", "Good game! Let's see if you can beat your score."];
+const quizEndMessages: string[] = ["Fantastic job! Look at that score!", "You're a superstar! Well done!", "Amazing work! You're getting so good at this!", "Incredible! You finished the quiz!"];
+
+// --- VIEW COMPONENTS ---
+
+const DashboardHome: React.FC<{ onNavigate: (view: View) => void }> = ({ onNavigate }) => {
+    const [xpCount, setXpCount] = useState(1250);
+    const [selectedMood, setSelectedMood] = useState<string | null>(null);
+    const [clickedButton, setClickedButton] = useState<string | null>(null);
+
+    const moods = [ { emoji: "😊", label: "Happy", value: "happy", color: "bg-green-100 hover:bg-green-200" }, { emoji: "😐", label: "Okay", value: "okay", color: "bg-yellow-100 hover:bg-yellow-200" }, { emoji: "😢", label: "Sad", value: "sad", color: "bg-blue-100 hover:bg-blue-200" }, ];
+    
+    const mainActivities = [
+        { title: "Start Learning", description: "Begin your magical learning adventure!", emoji: "🎓", color: "bg-gradient-to-br from-yellow-400 via-orange-400 to-red-500", hoverColor: "hover:from-yellow-300 hover:via-orange-300 hover:to-red-400", size: "large", tooltip: "Start your personalized learning path with fun activities!", view: 'module-selection' },
+        { title: "Watch a Video", description: "Fun educational videos just for you", emoji: "📺", color: "bg-gradient-to-br from-red-400 via-pink-400 to-purple-500", hoverColor: "hover:from-red-300 hover:via-pink-300 hover:to-purple-400", size: "medium", tooltip: "Watch safe and fun educational videos!", view: 'child-home' },
+        { title: "Play a Game", description: "Interactive puzzles and quizzes!", emoji: "🧩", color: "bg-gradient-to-br from-green-400 via-teal-400 to-blue-500", hoverColor: "hover:from-green-300 hover:via-teal-300 hover:to-blue-400", size: "medium", tooltip: "Play fun games while learning new things!", view: 'game-selection' },
+        { title: "Story Time", description: "Listen to amazing stories with read-along", emoji: "📖", color: "bg-gradient-to-br from-purple-400 via-indigo-400 to-blue-500", hoverColor: "hover:from-purple-300 hover:via-indigo-300 hover:to-blue-400", size: "medium", tooltip: "Listen to stories with word highlighting and voice reading!", view: 'child-home' },
+        { title: "My Rewards", description: "See all your awesome badges and stickers!", emoji: "🏅", color: "bg-gradient-to-br from-amber-400 via-yellow-400 to-orange-500", hoverColor: "hover:from-amber-300 hover:via-yellow-300 hover:to-orange-400", size: "medium", tooltip: "Check out all the cool badges and stickers you've earned!", view: 'child-home' },
+    ];
+
+    const handleButtonClick = (view: View) => {
+        setClickedButton(view);
+        setXpCount((prev) => prev + 5);
+        setTimeout(() => {
+            onNavigate(view);
+            setClickedButton(null);
+        }, 300);
+    }
+    
+    return (
+        <TooltipProvider>
+            <div className="max-w-7xl mx-auto p-6 animate-in fade-in duration-500">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    <div className="lg:col-span-3">
+                        <div className="mb-8 text-center lg:text-left">
+                            <h1 className="text-5xl font-black text-gray-800 mb-4">Welcome back, Alex! 🎉</h1>
+                            <p className="text-2xl text-gray-600 font-semibold">Ready for a learning adventure?</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {mainActivities.map((activity) => {
+                                const isLarge = activity.size === "large";
+                                const isClicked = clickedButton === activity.view;
+                                return (
+                                    <Tooltip key={activity.title}>
+                                        <TooltipTrigger asChild>
+                                            <Card
+                                                className={clsx( "text-white hover:scale-105 transition-all duration-300 cursor-pointer border-4 border-white shadow-2xl", isLarge && "md:col-span-2 lg:col-span-2", activity.color, activity.hoverColor, isClicked && "scale-95 shadow-inner" )}
+                                                onClick={() => handleButtonClick(activity.view as View)}
+                                            >
+                                                <CardContent className={clsx("p-8", isLarge && "text-center")}>
+                                                    <div className="flex flex-col items-center space-y-4">
+                                                        <div className={clsx("bg-white/30 rounded-full flex items-center justify-center", isLarge ? "w-24 h-24" : "w-20 h-20")}>
+                                                            <span className={clsx(isLarge ? "text-5xl" : "text-4xl")}>{activity.emoji}</span>
+                                                        </div>
+                                                        <div>
+                                                            <h3 className={clsx("font-black mb-2", isLarge ? "text-4xl" : "text-3xl")}>{activity.title}</h3>
+                                                            <p className={clsx("opacity-90 font-semibold", isLarge ? "text-xl" : "text-lg")}>{activity.description}</p>
+                                                        </div>
+                                                        {activity.title === "Start Learning" && ( <Button size="lg" className="bg-white text-orange-600 hover:bg-gray-100 font-black text-xl px-8 py-3 rounded-full shadow-lg">Let's Go! 🚀</Button> )}
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        </TooltipTrigger>
+                                        <TooltipContent><p className="text-lg font-semibold">{activity.tooltip}</p></TooltipContent>
+                                    </Tooltip>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    <div className="space-y-8">
+                        <Card className="border-2 border-pink-200 shadow-xl"><CardContent className="p-6"><h3 className="text-2xl font-black text-gray-800 mb-4 flex items-center"><Heart className="h-6 w-6 text-pink-500 mr-2"/> How are you?</h3><div className="grid grid-cols-3 gap-2">{moods.map(mood => <Button key={mood.value} variant={selectedMood === mood.value ? "default" : "outline"} className={clsx("h-16 text-lg", mood.color, selectedMood === mood.value && "ring-2 ring-pink-400")} onClick={() => setSelectedMood(mood.value)}><span className="text-3xl">{mood.emoji}</span></Button>)}</div></CardContent></Card>
+                        <Card className="border-2 border-blue-200 shadow-xl"><CardContent className="p-6"><h3 className="text-2xl font-black text-gray-800 mb-4">Quick Actions</h3><div className="space-y-3"><Dialog><DialogTrigger asChild><Button variant="outline" className="w-full justify-start text-lg py-5"><Settings className="mr-3"/> Settings</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Settings</DialogTitle></DialogHeader><div className="p-4">App settings will be here.</div></DialogContent></Dialog><Button variant="outline" className="w-full justify-start text-lg py-5"><HelpCircle className="mr-3"/> Help</Button><Button variant="outline" className="w-full justify-start text-lg py-5 text-red-600 hover:bg-red-50 hover:text-red-700"><LogOut className="mr-3"/> Logout</Button></div></CardContent></Card>
+                    </div>
+                </div>
+            </div>
+        </TooltipProvider>
+    );
+};
+
+
+const SubjectSelection: React.FC<{ onSelectSubject: (subjectKey: keyof SubjectsData) => void; onBack: () => void; }> = ({ onSelectSubject, onBack }) => (
+      <div className="max-w-4xl mx-auto px-4 animate-in fade-in duration-500">
+          <Button onClick={onBack} className="mb-8 bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2">
+              <ArrowLeft size={16} /> Back to Dashboard
+          </Button>
+          <h1 className="text-4xl text-center text-gray-800 font-bold mb-2">Choose a Subject</h1>
+          <p className="text-xl text-center text-gray-600 mb-12">What would you like to learn today?</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <Card onClick={() => onSelectSubject('english')} className="p-6 border-amber-400 bg-amber-50 hover:bg-amber-100 cursor-pointer">
+                  <h2 className="text-3xl font-bold text-amber-700 mb-3">English Fun</h2>
+                  <p className="text-lg text-gray-700">{subjectsData.english.description}</p>
+              </Card>
+              <Card onClick={() => onSelectSubject('maths')} className="p-6 border-sky-400 bg-sky-50 hover:bg-sky-100 cursor-pointer">
+                  <h2 className="text-3xl font-bold text-sky-700 mb-3">Math Adventures</h2>
+                  <p className="text-lg text-gray-700">{subjectsData.maths.description}</p>
+              </Card>
+          </div>
+      </div>
+);
+
+const GameSelection: React.FC<{ onStartGame: (game: 'english-game' | 'maths-game') => void; onBack: () => void; }> = ({ onStartGame, onBack }) => (
+     <div className="max-w-4xl mx-auto px-4 animate-in fade-in duration-500">
+         <Button onClick={onBack} className="mb-8 bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2">
+            <ArrowLeft size={16} /> Back to Dashboard
+        </Button>
+        <h1 className="text-4xl text-center text-gray-800 font-bold mb-2">Choose a Game</h1>
+         <p className="text-xl text-center text-gray-600 mb-12">Let's play and learn!</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Card onClick={() => onStartGame('english-game')} className="p-6 border-rose-400 bg-rose-50 hover:bg-rose-100 cursor-pointer">
+                <h2 className="text-3xl font-bold text-rose-700 mb-3">Letter Match</h2>
+                <p className="text-lg text-gray-700">Match the letter to the right picture!</p>
+            </Card>
+            <Card onClick={() => onStartGame('maths-game')} className="p-6 border-green-400 bg-green-50 hover:bg-green-100 cursor-pointer">
+                <h2 className="text-3xl font-bold text-green-700 mb-3">Number Catch</h2>
+                <p className="text-lg text-gray-700">Catch the falling numbers!</p>
+            </Card>
+        </div>
+    </div>
+);
+
+
+const ModuleSelection: React.FC<{ subject: Subject; onStartModule: (deck: CardData[]) => void; onBack: () => void; }> = ({ subject, onStartModule, onBack }) => (
+    <div className="max-w-4xl mx-auto px-4 animate-in fade-in duration-500">
+        <Button onClick={onBack} className="mb-8 bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2"><ArrowLeft size={16} /> Back to Subjects</Button>
+        <h1 className={clsx("text-4xl text-center mb-2 font-bold", subject.textColor)}>{subject.title}</h1>
+        <p className="text-xl text-center text-gray-600 mb-12">{subject.description}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {subject.modules.map(module => (
+                <Card key={module.title} onClick={() => onStartModule(module.deck)} className={clsx("p-6 h-full flex flex-col justify-between cursor-pointer", subject.borderColor, subject.bgColor, subject.hoverBgColor)}>
+                    <div>
+                        <h2 className={clsx("text-2xl font-bold mb-2", subject.textColor)}>{module.title}</h2>
+                        <p className="text-gray-700">{module.description}</p>
+                    </div>
+                    <div className="text-right mt-4 font-bold text-gray-500">Start &rarr;</div>
+                </Card>
+            ))}
+        </div>
+    </div>
+);
+
+const LearningModule: React.FC<{ deck: CardData[]; onClose: () => void }> = ({ deck, onClose }) => {
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [useSimpleText, setUseSimpleText] = useState(false);
+    const card = deck[currentIndex];
+    
+    const speak = (text: string) => {
+        if (typeof window.speechSynthesis === 'undefined') return;
+        speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        speechSynthesis.speak(utterance);
+    };
+
+    const textToDisplay = useSimpleText ? card.simpleText : card.text;
+
+    return (
+         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in">
+            <Card className="relative w-full max-w-2xl p-8 flex flex-col md:flex-row items-center gap-8 border-gray-200">
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-3xl">&times;</button>
+                <img src="https://placehold.co/150x150/f59e0b/FFFFFF?text=Leo" alt="Leo the Lion" className="rounded-full w-24 h-24 md:w-32 md:h-32 border-4 border-amber-200" />
+                <div className="flex-1 text-center md:text-left">
+                    <img src={card.image} alt="Learning Image" className="w-full h-48 object-contain rounded-xl mb-4 bg-gray-50 p-2 border" />
+                    <p className={clsx("font-bold text-gray-800 mb-4 h-20 flex items-center justify-center md:justify-start", useSimpleText ? 'text-2xl' : 'text-5xl')}>{textToDisplay}</p>
+                    <div className="flex items-center justify-center md:justify-start gap-4 mb-6">
+                        <Button onClick={() => speak(textToDisplay)} className="bg-teal-500 text-white p-3 rounded-full hover:bg-teal-600"><Volume2 size={24} /></Button>
+                        <div className="flex items-center space-x-2 p-1 bg-gray-100 rounded-full">
+                            <Button onClick={() => setUseSimpleText(false)} className={clsx("px-3 text-sm", !useSimpleText && 'bg-white shadow rounded-full')}>Regular</Button>
+                            <Button onClick={() => setUseSimpleText(true)} className={clsx("px-3 text-sm", useSimpleText && 'bg-white shadow rounded-full')}>Simple</Button>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <Button onClick={() => setCurrentIndex(i => i - 1)} disabled={currentIndex === 0} className="bg-gray-200 text-gray-700 hover:bg-gray-300">Prev</Button>
+                        <p className="text-gray-500 font-semibold">{currentIndex + 1} / {deck.length}</p>
+                        <Button onClick={() => setCurrentIndex(i => i + 1)} disabled={currentIndex === deck.length - 1} className="bg-gray-200 text-gray-700 hover:bg-gray-300">Next</Button>
+                    </div>
+                </div>
+            </Card>
+        </div>
+    );
+};
+
+const EnglishGame: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+    const [questions, setQuestions] = useState<EnglishQuestion[]>([]);
+    const [questionIndex, setQuestionIndex] = useState(0);
+    const [score, setScore] = useState(0);
+    const [feedback, setFeedback] = useState<{ text: string, color: string } | null>(null);
+    const [gameState, setGameState] = useState<'loading' | 'active' | 'finished' | 'error'>('loading');
+    const [endMessage, setEndMessage] = useState('');
+
+    const generateQuiz = async () => {
+        setGameState('loading');
+        
+        // 1. Ensure the API key is being read correctly.
+        const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+
+        // Check if the API key is missing
+        if (!apiKey) {
+            console.error("Gemini API key is missing. Make sure it's in your .env.local file.");
+            setGameState('error');
+            return;
+        }
+
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+        // 2. Simplified prompt to explicitly ask for raw JSON.
+        const prompt = "Generate a JSON array of 10 unique quiz questions for a 'letter match' game. Each object must have 'letter', 'correct', and 'options' properties. The two distractor nouns in 'options' MUST NOT start with the question's 'letter'. All words must be for a 5-7 year old. IMPORTANT: Respond ONLY with the raw JSON array, without any surrounding text or markdown formatting.";
+
+        // 3. Simplified payload without the 'generationConfig' and 'responseSchema'.
+        const payload = {
+            contents: [{ parts: [{ text: prompt }] }],
+        };
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            // Added more detailed error logging
+            if (!response.ok) {
+                const errorBody = await response.json();
+                console.error("API Error Response:", errorBody);
+                throw new Error(`API Error: ${response.status}`);
+            }
+
+            const result = await response.json();
+            const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            if (jsonText) {
+                // The response might still have markdown backticks, so we clean them
+                const cleanedJsonText = jsonText.replace(/^```json\n/, '').replace(/\n```$/, '');
+                const parsedQuestions = JSON.parse(cleanedJsonText);
+                
+                if (Array.isArray(parsedQuestions) && parsedQuestions.length > 0) {
+                    setQuestions(parsedQuestions);
+                    setQuestionIndex(0);
+                    setScore(0);
+                    setFeedback(null);
+                    setGameState('active');
+                } else {
+                    throw new Error("Invalid question format received.");
+                }
+            } else {
+                throw new Error("No questions generated in the response.");
+            }
+        } catch (error) {
+            console.error("Failed to generate or parse quiz:", error);
+            setGameState('error');
+        }
+    };
+    
+    useEffect(() => { generateQuiz(); }, []);
+    
+    const handleAnswer = (selectedOption: string) => {
+        if (feedback) return;
+        const isCorrect = selectedOption === questions[questionIndex].correct;
+        if (isCorrect) {
+            setScore(prev => prev + 1);
+            setFeedback({ text: 'Correct! 🎉', color: 'text-green-500' });
+        } else {
+            setFeedback({ text: 'Not quite!', color: 'text-red-500' });
+        }
+        setTimeout(() => {
+            setFeedback(null);
+            if (questionIndex < questions.length - 1) {
+                setQuestionIndex(prev => prev + 1);
+            } else {
+                setEndMessage(quizEndMessages[Math.floor(Math.random() * quizEndMessages.length)]);
+                setGameState('finished');
+            }
+        }, 1500);
+    };
+
+     const renderGameContent = () => {
+        switch (gameState) {
+            case 'loading': return <div className="text-2xl animate-pulse">✨ Generating your quiz...</div>;
+            case 'error': return (<div><p className="text-xl text-red-500 mb-4">Oops! We couldn't create a quiz right now.</p><Button onClick={generateQuiz} className="bg-rose-500 text-white hover:bg-rose-600">Try Again</Button></div>);
+            case 'finished': return (<div><h2 className="text-4xl font-bold text-rose-600 mb-4">Quiz Complete!</h2><p className="text-2xl text-gray-700 mb-2">{endMessage}</p><p className="text-5xl font-bold text-teal-600 my-6">{score} / {questions.length}</p><Button onClick={generateQuiz} className="bg-rose-500 text-white py-3 px-8 rounded-xl text-xl hover:bg-rose-600">Play Again</Button></div>);
+            case 'active':
+                if (questions.length === 0) return null;
+                const question = questions[questionIndex];
+                return (
+                    <div className="flex flex-col items-center w-full">
+                        <h2 className="text-3xl font-bold text-rose-600 mb-2">Letter Match Game ({questionIndex + 1}/{questions.length})</h2>
+                        <p className="text-xl text-gray-600 mb-6">Which picture starts with the letter...</p>
+                        <div className="grid md:grid-cols-2 items-center justify-items-center gap-8 w-full px-4">
+                            <p className="text-9xl font-bold text-gray-800 justify-self-center md:justify-self-end">{question.letter}</p>
+                            <div className="flex flex-col gap-4 justify-self-center md:justify-self-start">
+                                {question.options.map(option => (
+                                    <button key={option} onClick={() => handleAnswer(option)} className="bg-gray-100 p-3 rounded-xl hover:bg-gray-200 disabled:opacity-50 flex items-center gap-3 text-left w-64 border hover:border-gray-300" disabled={!!feedback}>
+                                        <img src={`https://placehold.co/80x60/FFFFFF/000000?text=${option}`} alt={option} className="rounded-md bg-white" />
+                                        <p className="text-xl flex-grow">{option}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="h-8 mt-4">{feedback && <p className={`text-2xl font-bold ${feedback.color}`}>{feedback.text}</p>}</div>
+                    </div>
+                );
+        }
+    };
+    
+    return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in"><Card className="relative w-full max-w-4xl p-8 text-center min-h-[500px] flex items-center justify-center border-gray-200"><button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-3xl">&times;</button>{renderGameContent()}</Card></div>);
+};
+
+const MathsGame: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+    const [score, setScore] = useState(0);
+    const [catchCount, setCatchCount] = useState(0);
+    const [lives, setLives] = useState(5);
+    const [bubbles, setBubbles] = useState<any[]>([]);
+    const [gameOver, setGameOver] = useState(false);
+    const [gameOverMessage, setGameOverMessage] = useState("");
+    const gameAreaRef = useRef<HTMLDivElement>(null);
+    const intervalsRef = useRef<NodeJS.Timeout[]>([]);
+
+    const startGame = () => {
+        setScore(0);
+        setCatchCount(0);
+        setLives(5);
+        setBubbles([]);
+        setGameOver(false);
+        intervalsRef.current.forEach(clearInterval);
+        intervalsRef.current = [];
+
+        const bubbleInterval = setInterval(() => {
+            setBubbles(prev => [...prev, { id: Date.now(), value: Math.ceil(Math.random() * 5), left: `${Math.random() * 90}%`, top: -50 }]);
+        }, 1200);
+        intervalsRef.current.push(bubbleInterval);
+    };
+
+    useEffect(() => {
+        startGame();
+        return () => { intervalsRef.current.forEach(clearInterval); };
+    }, []);
+
+    useEffect(() => {
+        if (lives <= 0 && !gameOver) {
+            setGameOver(true);
+            setGameOverMessage(gameOverMessages[Math.floor(Math.random() * gameOverMessages.length)]);
+            intervalsRef.current.forEach(clearInterval);
+            intervalsRef.current = [];
+        }
+    }, [lives, gameOver]);
+
+    const handlePop = (id: number, value: number) => {
+        setBubbles(prev => prev.filter(b => b.id !== id));
+        setCatchCount(c => c + 1);
+        setScore(s => s + value);
+    };
+
+    const handleMiss = (id: number) => {
+        setBubbles(prev => prev.filter(b => b.id !== id));
+        setLives(l => l - 1);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in">
+            <Card className="relative w-full max-w-3xl p-8 text-center overflow-hidden border-gray-200">
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-3xl">&times;</button>
+                {!gameOver ? (
+                    <>
+                        <h2 className="text-3xl font-bold text-green-600 mb-2">Number Catch Game</h2>
+                        <div className="flex justify-between items-center px-4">
+                            <div className="flex gap-1">{Array.from({ length: 5 }).map((_, i) => (<span key={i} className={clsx("text-2xl", i < lives ? 'text-green-500' : 'text-gray-300')}>●</span>))}</div>
+                            <div>
+                                <p className="text-lg text-gray-600">Catches: <span className="font-bold">{catchCount}</span></p>
+                                <p className="text-lg text-gray-800">Score: <span className="font-bold">{score}</span></p>
+                            </div>
+                        </div>
+                        <div ref={gameAreaRef} className="relative w-full h-96 bg-sky-100 mt-4 rounded-lg border-2 border-sky-300 overflow-hidden">
+                            {bubbles.map(bubble => (<Bubble key={bubble.id} {...bubble} onPop={handlePop} onMiss={handleMiss} gameAreaRef={gameAreaRef} />))}
+                        </div>
+                    </>
+                ) : (
+                    <div>
+                        <h2 className="text-4xl font-bold text-red-600 mb-4">Game Over!</h2>
+                        <p className="text-xl text-gray-600 mb-4">{gameOverMessage}</p>
+                        <p className="text-2xl text-gray-700">Final Score: <span className="font-bold">{score}</span></p>
+                        <p className="text-2xl text-gray-700 mb-8">You Caught: <span className="font-bold">{catchCount}</span> bubbles</p>
+                        <Button onClick={startGame} className="bg-green-500 text-white py-3 px-8 rounded-xl text-2xl hover:bg-green-600">Play Again</Button>
+                    </div>
+                )}
+            </Card>
+        </div>
+    );
+};
+
+const Bubble: React.FC<{ id: number; value: number; left: string; onPop: (id: number, value: number) => void; onMiss: (id: number) => void; gameAreaRef: React.RefObject<HTMLDivElement> }> = ({ id, value, left, onPop, onMiss, gameAreaRef }) => {
+    const [top, setTop] = useState(-50);
+    const poppedRef = useRef(false);
+    
+    useEffect(() => {
+        const interval = setInterval(() => setTop(t => t + 5), 30);
+        return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
+        if (gameAreaRef.current && top > gameAreaRef.current.offsetHeight) {
+            if (!poppedRef.current) {
+                onMiss(id);
+            }
+        }
+    }, [top, gameAreaRef, onMiss, id]);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (poppedRef.current) return;
+        poppedRef.current = true;
+        const target = e.currentTarget;
+        target.classList.add('animate-out', 'fade-out', 'scale-150');
+        setTimeout(() => onPop(id, value), 200);
+    };
+
+    return <div onMouseDown={handleMouseDown} className="absolute text-3xl font-bold text-white bg-green-500 rounded-full w-14 h-14 flex items-center justify-center cursor-pointer select-none" style={{ left, top: `${top}px` }}>{value}</div>;
+};
+
+// --- MAIN CHILD DASHBOARD COMPONENT ---
+export function ChildDashboard() {
+    const [currentView, setCurrentView] = useState<View>('child-home');
+    const [currentDeck, setCurrentDeck] = useState<CardData[]>([]);
+    const [selectedSubjectKey, setSelectedSubjectKey] = useState<keyof SubjectsData | null>(null);
+
+    const handleNavigate = (view: View) => {
+        setCurrentView(view);
+    };
+
+    const renderView = () => {
+        switch (currentView) {
+            case 'child-home':
+                return <DashboardHome onNavigate={handleNavigate} />;
+            case 'module-selection':
+                 const subject = selectedSubjectKey ? subjectsData[selectedSubjectKey] : null;
+                if (!subject) return <SubjectSelection onSelectSubject={(key) => {setSelectedSubjectKey(key);}} onBack={() => setCurrentView('child-home')} />;
+                return <ModuleSelection subject={subject} onStartModule={(deck) => {setCurrentDeck(deck); setCurrentView('module');}} onBack={() => {setSelectedSubjectKey(null); setCurrentView('child-home');}} />;
+            case 'module':
+                return <LearningModule deck={currentDeck} onClose={() => setCurrentView('module-selection')} />;
+            case 'game-selection':
+                return <GameSelection onStartGame={(game) => setCurrentView(game)} onBack={() => setCurrentView('child-home')} />
+            case 'english-game':
+                return <EnglishGame onClose={() => setCurrentView('game-selection')} />;
+            case 'maths-game':
+                return <MathsGame onClose={() => setCurrentView('game-selection')} />;
+            default:
+                return <DashboardHome onNavigate={handleNavigate} />;
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-50 to-pink-100">
+           {renderView()}
+        </div>
+    );
+}
+

@@ -42,12 +42,12 @@ export function ParentDashboard() {
   const [selectedChild, setSelectedChild] = useState("alex")
   const [timeRange, setTimeRange] = useState("week")
   const [dailyTimeGoal, setDailyTimeGoal] = useState([30])
-  const [formatPreferences, setFormatPreferences] = useState({
-    videos: true,
-    games: true,
-    reading: true,
-    stories: true,
-  })
+  // const [formatPreferences, setFormatPreferences] = useState({
+  //   videos: true,
+  //   games: true,
+  //   reading: true,
+  //   stories: true,
+  // })
 
   const children = [
     { id: "alex", name: "Alex", age: 7, avatar: "👦", grade: "Grade 2" },
@@ -320,7 +320,7 @@ export function ParentDashboard() {
               </Card>
 
               {/* Format Engagement */}
-              <Card className="shadow-lg">
+              {/* <Card className="shadow-lg">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2 text-xl">
                     <Eye className="h-6 w-6" />
@@ -358,7 +358,7 @@ export function ParentDashboard() {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+              </Card> */}
 
               {/* AI Suggestions */}
               <Card className="shadow-lg border-2 border-blue-200">
@@ -481,7 +481,7 @@ export function ParentDashboard() {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Sliders className="h-5 w-5 text-green-500" />
-                    <span>Learning Goals & Settings</span>
+                    <span>Set the Time Goal</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -504,8 +504,8 @@ export function ParentDashboard() {
                     </div>
                   </div>
 
-                  <div>
-                    <h4 className="font-bold mb-4">Format Preferences</h4>
+                  {/* <div> */}
+                    {/* <h4 className="font-bold mb-4">Format Preferences</h4>
                     <div className="space-y-3">
                       {Object.entries(formatPreferences).map(([key, value]) => (
                         <div key={key} className="flex items-center justify-between">
@@ -516,11 +516,11 @@ export function ParentDashboard() {
                           />
                         </div>
                       ))}
-                    </div>
-                  </div>
+                    </div> */}
+                  {/* </div> */}
 
                   <Button className="w-full bg-gradient-to-r from-green-500 to-blue-600 text-white font-bold">
-                    Save Settings
+                    Set Timing
                   </Button>
                 </CardContent>
               </Card>
