@@ -1,16 +1,17 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Volume2, Star, Gamepad2, Settings, LogOut, Smile, Meh, Frown, Heart, User, HelpCircle, Sparkles } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ArrowLeft, Volume2, Star, Gamepad2, Settings, LogOut, Smile, Meh, Frown, Heart, User, HelpCircle, Sparkles, Play, Pause, RotateCcw, VolumeX, Gauge, BookText, Zap } from "lucide-react";
 import { clsx } from 'clsx';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAudioCompanion } from "@/hooks/useAudioCompanion";
-import { StoryTime } from "@/components/story-time";
+import { Slider } from "@/components/ui/slider";
+
 // --- TYPE DEFINITIONS ---
-type View = 'child-home' | 'module-selection' | 'module' | 'game-selection' | 'english-game' | 'maths-game' | 'story-time';
+type View = 'child-home' | 'module-selection' | 'module' | 'game-selection' | 'english-game' | 'maths-game' | 'story-time' | 'interactive-story' | 'read-along-story';
 
 interface CardData {
     image: string;
@@ -45,49 +46,46 @@ type SubjectsData = {
     maths: Subject;
 }
 
+interface Story {
+  id: string;
+  title: string;
+  author: string;
+  coverImage: string;
+  text: string;
+  sentences: string[];
+}
+
 // --- DATA CONSTANTS ---
-const lettersDeck: CardData[] = [
-    { image: 'https://placehold.co/400x200/FFC8DD/000000?text=Aa+-+Apple', text: 'A', simpleText: 'A is for Apple.' },
-    { image: 'https://placehold.co/400x200/A2D2FF/000000?text=Bb+-+Ball', text: 'B', simpleText: 'B is for Ball.' },
-    { image: 'https://placehold.co/400x200/BDE0FE/000000?text=Cc+-+Cat', text: 'C', simpleText: 'C is for Cat.' },
-    { image: 'https://placehold.co/400x200/CDB4DB/000000?text=Dd+-+Dog', text: 'D', simpleText: 'D is for Dog.' },
-    { image: 'https://placehold.co/400x200/FFADAD/000000?text=Ee+-+Elephant', text: 'E', simpleText: 'E is for Elephant.' },
-    { image: 'https://placehold.co/400x200/FFD6A5/000000?text=Ff+-+Fish', text: 'F', simpleText: 'F is for Fish.' },
-    { image: 'https://placehold.co/400x200/FDFFB6/000000?text=Gg+-+Goat', text: 'G', simpleText: 'G is for Goat.' },
-    { image: 'https://placehold.co/400x200/CAFFBF/000000?text=Hh+-+Hat', text: 'H', simpleText: 'H is for Hat.' },
-    { image: 'https://placehold.co/400x200/9BF6FF/000000?text=Ii+-+Igloo', text: 'I', simpleText: 'I is for Igloo.' },
-    { image: 'https://placehold.co/400x200/A0C4FF/000000?text=Jj+-+Jar', text: 'J', simpleText: 'J is for Jar.' },
-    { image: 'https://placehold.co/400x200/BDB2FF/000000?text=Kk+-+Kite', text: 'K', simpleText: 'K is for Kite.' },
-    { image: 'https://placehold.co/400x200/FFB3DE/000000?text=Ll+-+Lion', text: 'L', simpleText: 'L is for Lion.' },
-    { image: 'https://placehold.co/400x200/FFC8DD/000000?text=Mm+-+Mouse', text: 'M', simpleText: 'M is for Mouse.' },
-    { image: 'https://placehold.co/400x200/A2D2FF/000000?text=Nn+-+Nest', text: 'N', simpleText: 'N is for Nest.' },
-    { image: 'https://placehold.co/400x200/BDE0FE/000000?text=Oo+-+Octopus', text: 'O', simpleText: 'O is for Octopus.' },
-    { image: 'https://placehold.co/400x200/CDB4DB/000000?text=Pp+-+Pig', text: 'P', simpleText: 'P is for Pig.' },
-    { image: 'https://placehold.co/400x200/FFADAD/000000?text=Qq+-+Queen', text: 'Q', simpleText: 'Q is for Queen.' },
-    { image: 'https://placehold.co/400x200/FFD6A5/000000?text=Rr+-+Rabbit', text: 'R', simpleText: 'R is for Rabbit.' },
-    { image: 'https://placehold.co/400x200/FDFFB6/000000?text=Ss+-+Sun', text: 'S', simpleText: 'S is for Sun.' },
-    { image: 'https://placehold.co/400x200/CAFFBF/000000?text=Tt+-+Tiger', text: 'T', simpleText: 'T is for Tiger.' },
-    { image: 'https://placehold.co/400x200/9BF6FF/000000?text=Uu+-+Umbrella', text: 'U', simpleText: 'U is for Umbrella.' },
-    { image: 'https://placehold.co/400x200/A0C4FF/000000?text=Vv+-+Vase', text: 'V', simpleText: 'V is for Vase.' },
-    { image: 'https://placehold.co/400x200/BDB2FF/000000?text=Ww+-+Whale', text: 'W', simpleText: 'W is for Whale.' },
-    { image: 'https://placehold.co/400x200/FFB3DE/000000?text=Xx+-+Xylophone', text: 'X', simpleText: 'X is for Xylophone.' },
-    { image: 'https://placehold.co/400x200/FFC8DD/000000?text=Yy+-+Yak', text: 'Y', simpleText: 'Y is for Yak.' },
-    { image: 'https://placehold.co/400x200/A2D2FF/000000?text=Zz+-+Zebra', text: 'Z', simpleText: 'Z is for Zebra.' },
+const lettersDeck: CardData[] = [ 
+  { image: '/images/A.jpeg', text: 'A', simpleText: 'A is for Apple.' }, 
+  { image: '/images/B.jpeg', text: 'B', simpleText: 'B is for Ball.' }, 
+  { image: '/images/C.jpeg', text: 'C', simpleText: 'C is for Cat.' }, 
+  { image: '/images/D.jpeg', text: 'D', simpleText: 'D is for Dog.' }, 
+  { image: '/images/E.jpeg', text: 'E', simpleText: 'E is for Egg.' }, 
+  { image: '/images/F.jpeg', text: 'F', simpleText: 'F is for Fish.' }, 
+  { image: '/images/G.jpeg', text: 'G', simpleText: 'G is for Goat.' }, 
+  { image: '/images/H.jpeg', text: 'H', simpleText: 'H is for Hat.' }, 
+  { image: '/images/I.jpeg', text: 'I', simpleText: 'I is for Igloo.' }, 
+  { image: '/images/J.jpeg', text: 'J', simpleText: 'J is for Jam.' }, 
+  { image: '/images/K.jpeg', text: 'K', simpleText: 'K is for King.' }, 
+  { image: '/images/L.jpeg', text: 'L', simpleText: 'L is for Lion.' }, 
+  { image: '/images/M.jpeg', text: 'M', simpleText: 'M is for Moon.' }, 
+  { image: '/images/N.jpeg', text: 'N', simpleText: 'N is for Nut.' }, 
+  { image: '/images/O.jpeg', text: 'O', simpleText: 'O is for Orange.' }, 
+  { image: '/images/P.jpeg', text: 'P', simpleText: 'P is for Pig.' }, 
+  { image: '/images/Q.jpeg', text: 'Q', simpleText: 'Q is for Queen.' }, 
+  { image: '/images/R.jpeg', text: 'R', simpleText: 'R is for Rocket.' }, 
+  { image: '/images/S.jpeg', text: 'S', simpleText: 'S is for Sun.' }, 
+  { image: '/images/T.jpeg', text: 'T', simpleText: 'T is for Tree.' }, 
+  { image: '/images/U.jpeg', text: 'U', simpleText: 'U is for Umbrella.' }, 
+  { image: '/images/V.jpeg', text: 'V', simpleText: 'V is for Van.' }, 
+  { image: '/images/W.jpeg', text: 'W', simpleText: 'W is for Watch.' }, 
+  { image: '/images/X.jpeg', text: 'X', simpleText: 'X is for X-ray.' }, 
+  { image: '/images/Y.jpeg', text: 'Y', simpleText: 'Y is for Yo-Yo.' }, 
+  { image: '/images/Z.jpeg', text: 'Z', simpleText: 'Z is for Zip.' }
 ];
 
-const numbersDeck: CardData[] = [
-    { image: 'https://placehold.co/400x200/E5E5E5/000000?text=0', text: 'Zero', simpleText: 'This is the number zero.' },
-    { image: 'https://placehold.co/400x200/D4A373/FFFFFF?text=1', text: 'One', simpleText: 'This is the number one.' },
-    { image: 'https://placehold.co/400x200/A3B18A/FFFFFF?text=2', text: 'Two', simpleText: 'This is the number two.' },
-    { image: 'https://placehold.co/400x200/588157/FFFFFF?text=3', text: 'Three', simpleText: 'This is the number three.' },
-    { image: 'https://placehold.co/400x200/3A5A40/FFFFFF?text=4', text: 'Four', simpleText: 'This is the number four.' },
-    { image: 'https://placehold.co/400x200/344E41/FFFFFF?text=5', text: 'Five', simpleText: 'This is the number five.' },
-    { image: 'https://placehold.co/400x200/F4A261/FFFFFF?text=6', text: 'Six', simpleText: 'This is the number six.' },
-    { image: 'https://placehold.co/400x200/E76F51/FFFFFF?text=7', text: 'Seven', simpleText: 'This is the number seven.' },
-    { image: 'https://placehold.co/400x200/DDA15E/FFFFFF?text=8', text: 'Eight', simpleText: 'This is the number eight.' },
-    { image: 'https://placehold.co/400x200/BC6C25/FFFFFF?text=9', text: 'Nine', simpleText: 'This is the number nine.' },
-];
-
+const numbersDeck: CardData[] = [ { image: 'https://placehold.co/400x200/E5E5E5/000000?text=0', text: 'Zero', simpleText: 'This is the number zero.' }, { image: 'https://placehold.co/400x200/D4A373/FFFFFF?text=1', text: 'One', simpleText: 'This is the number one.' }, { image: 'https://placehold.co/400x200/A3B18A/FFFFFF?text=2', text: 'Two', simpleText: 'This is the number two.' }, { image: 'https://placehold.co/400x200/588157/FFFFFF?text=3', text: 'Three', simpleText: 'This is the number three.' }, { image: 'https://placehold.co/400x200/3A5A40/FFFFFF?text=4', text: 'Four', simpleText: 'This is the number four.' }, { image: 'https://placehold.co/400x200/344E41/FFFFFF?text=5', text: 'Five', simpleText: 'This is the number five.' }, { image: 'https://placehold.co/400x200/F4A261/FFFFFF?text=6', text: 'Six', simpleText: 'This is the number six.' }, { image: 'https://placehold.co/400x200/E76F51/FFFFFF?text=7', text: 'Seven', simpleText: 'This is the number seven.' }, { image: 'https://placehold.co/400x200/DDA15E/FFFFFF?text=8', text: 'Eight', simpleText: 'This is the number eight.' }, { image: 'https://placehold.co/400x200/BC6C25/FFFFFF?text=9', text: 'Nine', simpleText: 'This is the number nine.' },];
 const verbsDeck: CardData[] = [ { image: 'https://placehold.co/400x200/FFADAD/000000?text=Run', text: 'Run', simpleText: 'The girl can run very fast.' }, { image: 'https://placehold.co/400x200/FFD6A5/000000?text=Jump', text: 'Jump', simpleText: 'Frogs can jump high.' }, { image: 'https://placehold.co/400x200/FDFFB6/000000?text=Read', text: 'Read', simpleText: 'He loves to read books.' }, { image: 'https://placehold.co/400x200/CAFFBF/000000?text=Sing', text: 'Sing', simpleText: 'She likes to sing a song.' }, { image: 'https://placehold.co/400x200/9BF6FF/000000?text=Eat', text: 'Eat', simpleText: 'It is time to eat lunch.' }, ];
 const adjectivesDeck: CardData[] = [ { image: 'https://placehold.co/400x200/FFC8DD/000000?text=Big', text: 'Big', simpleText: 'The elephant is big.' }, { image: 'https://placehold.co/400x200/A2D2FF/000000?text=Small', text: 'Small', simpleText: 'The mouse is small.' }, { image: 'https://placehold.co/400x200/BDE0FE/000000?text=Happy', text: 'Happy', simpleText: 'The smiley face is happy.' }, { image: 'https://placehold.co/400x200/CDB4DB/000000?text=Sad', text: 'Sad', simpleText: 'The crying child is sad.' }, { image: 'https://placehold.co/400x200/FFC8DD/000000?text=Red', text: 'Red', simpleText: 'The apple is red.' }, ];
 const additionDeck: CardData[] = [ { image: 'https://placehold.co/400x200/D4A373/FFFFFF?text=1%2B1=2', text: '1 + 1 = 2', simpleText: 'One plus one equals two.' }, { image: 'https://placehold.co/400x200/A3B18A/FFFFFF?text=2%2B1=3', text: '2 + 1 = 3', simpleText: 'Two plus one equals three.' }, { image: 'https://placehold.co/400x200/588157/FFFFFF?text=2%2B2=4', text: '2 + 2 = 4', simpleText: 'Two plus two equals four.' }, { image: 'https://placehold.co/400x200/3A5A40/FFFFFF?text=3%2B2=5', text: '3 + 2 = 5', simpleText: 'Three plus two equals five.' }, { image: 'https://placehold.co/400x200/344E41/FFFFFF?text=4%2B1=5', text: '4 + 1 = 5', simpleText: 'Four plus one equals five.' }, ];
@@ -102,6 +100,8 @@ const subjectsData: SubjectsData = {
 
 const gameOverMessages: string[] = ["Great try! Every game helps you learn.", "Awesome effort! Ready for another round?", "You did great! Practice makes perfect.", "Wow, you were so close! Let's play again!", "Good game! Let's see if you can beat your score."];
 const quizEndMessages: string[] = ["Fantastic job! Look at that score!", "You're a superstar! Well done!", "Amazing work! You're getting so good at this!", "Incredible! You finished the quiz!"];
+const stories: Story[] = [ { id: 'friendly-star', title: 'The Friendly Star', author: 'VidyaSetu Stories', coverImage: 'https://placehold.co/400x500/4F46E5/FFFFFF?text=The+Friendly+Star+⭐', text: '', sentences: [ 'Once upon a time, there was a little star named Stella.', 'Stella lived high up in the night sky.', 'Every night, she would twinkle and shine bright.', 'One day, Stella noticed a sad little boy below.', 'He was afraid of the dark.', 'Stella decided to help.', 'She shone extra bright, making beautiful patterns in the sky.', 'The boy looked up and smiled.', 'From that night on, Stella became his special friend.', 'And whenever he felt scared, he would look up at Stella.', 'The End.' ], }, { id: 'brave-cloud', title: 'The Brave Little Cloud', author: 'VidyaSetu Stories', coverImage: 'https://placehold.co/400x500/06B6D4/FFFFFF?text=The+Brave+Cloud+☁️', text: '', sentences: [ 'There once was a tiny cloud named Fluffy.', 'Fluffy was smaller than all the other clouds.', 'The big clouds would float high in the sky.', 'But Fluffy was too small and stayed low.', 'One hot summer day, the flowers were very thirsty.', 'They needed water badly.', 'The big clouds were too far away to help.', 'But brave little Fluffy knew what to do.', 'She gathered all her strength and made it rain!', 'The flowers drank the water and bloomed beautifully.', 'Everyone thanked Fluffy for being so brave.', 'From that day on, Fluffy knew that being small was okay.', 'You can still do big things!', 'The End.' ], }, { id: 'colorful-day', title: "Max's Colorful Day", author: 'VidyaSetu Stories', coverImage: 'https://placehold.co/400x500/F59E0B/FFFFFF?text=Max+Colorful+Day+🎨', text: '', sentences: [ 'Max woke up to a gray morning.', 'Everything looked dull and boring.', 'Max felt sad and did not want to get up.', 'Then his mom came in with a surprise.', 'She gave him a box of bright crayons!', 'Max started to draw.', 'He drew a big yellow sun.', 'He drew green trees and blue flowers.', 'He drew red birds and orange butterflies.', 'Soon his whole room was full of colors!', 'Max smiled and felt happy again.', 'He learned that he could make his own colorful day.', 'Even when things seem gray, you can add your own colors!', 'The End.' ], },];
+stories.forEach(story => { story.text = story.sentences.join(' '); });
 
 // --- VIEW COMPONENTS ---
 
@@ -265,101 +265,7 @@ const ModuleSelection: React.FC<{ subject: Subject; onStartModule: (deck: CardDa
     </div>
 );
 
-const StoryTime: React.FC<{ onBack: () => void; playAudio: (text: string | string[]) => void; }> = ({ onBack, playAudio }) => {
-    const story = [
-        { 
-            id: 1, 
-            text: "Leo the lion was walking through the jungle when he saw a small, crying monkey sitting under a big leaf. What should Leo do?",
-            choices: [
-                { text: "Ask the monkey why it's crying.", goTo: 2 }, 
-                { text: "Ignore the monkey and keep walking.", goTo: 3 }
-            ] 
-        },
-        { 
-            id: 2, 
-            text: "Leo walked over and gently asked, 'What's wrong, little one?' The monkey sniffled, 'I lost my favorite banana!' How should Leo help?",
-            choices: [
-                { text: "Climb a tall tree to look for it.", goTo: 4 }, 
-                { text: "Ask other jungle animals for help.", goTo: 5 }
-            ] 
-        },
-        { 
-            id: 3, 
-            text: "Leo decided he was too busy to stop and walked right past the crying monkey. As he walked, the jungle felt quiet and he started to feel a little lonely.",
-            choices: [
-                { text: "Go back and help the monkey.", goTo: 6 },
-                { text: "Keep walking by himself.", goTo: 7 }
-            ] 
-        },
-        { 
-            id: 4, 
-            text: "Leo bravely climbed a very tall tree! From the top, he could see everything. 'I see it!' he roared. 'The banana is near the sparkling river!'",
-            choices: [
-                { text: "Hooray! Let's go to the river!", goTo: 8 }
-            ] 
-        },
-        { 
-            id: 5, 
-            text: "Leo found a wise old parrot. 'Have you seen a banana?' Leo asked. The parrot squawked, 'Yes! I saw a silly toucan drop one near the sparkling river!'",
-            choices: [
-                { text: "Thank the parrot and go to the river.", goTo: 8 }
-            ] 
-        },
-        {
-            id: 6,
-            text: "Leo felt bad for not helping. He turned around and went back to the monkey. 'I'm sorry I walked past,' he said. 'I want to help you find your banana.'",
-            choices: [
-                { text: "Let's work together!", goTo: 2 }
-            ]
-        },
-        { 
-            id: 7, 
-            text: "Leo kept walking alone. He finished his walk, but he couldn't stop thinking about the sad little monkey. He learned that helping others feels much better than walking alone. The End.",
-            choices: [
-                { text: "Play Again", goTo: 1 }
-            ] 
-        },
-        { 
-            id: 8, 
-            text: "Leo and the monkey raced to the river and found the banana! The monkey was so happy, it shared the banana with Leo. They ate their snack together and became the best of friends. The End.",
-            choices: [
-                { text: "Play Again", goTo: 1 }
-            ] 
-        },
-    ];
-
-    const [currentPage, setCurrentPage] = useState(story[0]);
-
-    useEffect(() => {
-        playAudio(currentPage.text);
-    }, [currentPage, playAudio]);
-
-    const handleChoice = (goToId: number) => {
-        const nextPage = story.find(p => p.id === goToId);
-        if (nextPage) {
-            setCurrentPage(nextPage);
-        }
-    };
-
-    return (
-        <div className="max-w-4xl mx-auto px-4 animate-in fade-in duration-500">
-            <Button onClick={onBack} className="mb-8 bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2">
-                <ArrowLeft size={16} /> Back to Dashboard
-            </Button>
-            <Card className="p-8 text-center border-purple-300 border-2">
-                <img src="https://placehold.co/600x300/e9d5ff/a855f7?text=Story+Adventure" alt="Story Illustration" className="rounded-lg mx-auto mb-6" />
-                <p className="text-2xl text-gray-800 mb-8 min-h-[100px]">{currentPage.text}</p>
-                <div className="flex flex-col md:flex-row gap-4 justify-center">
-                    {currentPage.choices.map((choice) => (
-                        <Button key={choice.goTo + currentPage.id} onClick={() => handleChoice(choice.goTo)} className="bg-purple-500 hover:bg-purple-600 text-white text-lg py-6 flex-1">
-                            {choice.text}
-                        </Button>
-                    ))}
-                </div>
-            </Card>
-        </div>
-    );
-};
+// In components/child-dashboard.tsx
 
 const LearningModule: React.FC<{ deck: CardData[]; onClose: () => void }> = ({ deck, onClose }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -367,27 +273,22 @@ const LearningModule: React.FC<{ deck: CardData[]; onClose: () => void }> = ({ d
     const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
     const card = deck[currentIndex];
 
-    // Effect to load voices
+    // Combined useEffect for managing voices and cleanup
     useEffect(() => {
         const loadVoices = () => {
             setVoices(window.speechSynthesis.getVoices());
         };
+
         if (typeof window.speechSynthesis !== 'undefined') {
             window.speechSynthesis.onvoiceschanged = loadVoices;
-            loadVoices();
+            loadVoices(); // Initial load
         }
+
+        // Cleanup function runs when the component is unmounted
         return () => {
             if (typeof window.speechSynthesis !== 'undefined') {
                 window.speechSynthesis.onvoiceschanged = null;
-            }
-        };
-    }, []);
-
-    // Effect to cancel speech on unmount
-    useEffect(() => {
-        return () => {
-            if (typeof window.speechSynthesis !== 'undefined') {
-                speechSynthesis.cancel();
+                speechSynthesis.cancel(); // Stop any speech on close
             }
         };
     }, []);
@@ -416,16 +317,20 @@ const LearningModule: React.FC<{ deck: CardData[]; onClose: () => void }> = ({ d
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in">
             <Card className="relative w-full max-w-2xl p-8 flex flex-col md:flex-row items-center gap-8 border-gray-200">
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-3xl">&times;</button>
-                <img src="https://placehold.co/150x150/f59e0b/FFFFFF?text=Leo" alt="Leo the Lion" className="rounded-full w-24 h-24 md:w-32 md:h-32 border-4 border-amber-200" />
-                <div className="flex-1 text-center md:text-left">
+                <img src="https://placehold.co/150x150/f59e0b/FFFFFF?text=Vidya" alt="Vidya the Companion" className="rounded-full w-24 h-24 md:w-32 md:h-32 border-4 border-amber-200" />
+                <div className="flex-1 text-center md:text-left w-full">
                     <img src={card.image} alt="Learning Image" className="w-full h-48 object-contain rounded-xl mb-4 bg-gray-50 p-2 border" />
                     <p className={clsx("font-bold text-gray-800 mb-4 h-20 flex items-center justify-center md:justify-start", useSimpleText ? 'text-2xl' : 'text-5xl')}>{textToDisplay}</p>
                     <div className="flex items-center justify-center md:justify-start gap-4 mb-6">
                         <Button onClick={() => speak(textToDisplay)} className="bg-teal-500 text-white p-3 rounded-full hover:bg-teal-600"><Volume2 size={24} /></Button>
-                        <div className="flex items-center space-x-2 p-1 bg-gray-100 rounded-full">
-                            <Button onClick={() => setUseSimpleText(false)} className={clsx("px-3 text-sm", !useSimpleText && 'bg-white shadow rounded-full')}>Regular</Button>
-                            <Button onClick={() => setUseSimpleText(true)} className={clsx("px-3 text-sm", useSimpleText && 'bg-white shadow rounded-full')}>Simple</Button>
+                        
+                        {/* --- CORRECTED TOGGLE BUTTONS --- */}
+                        <div className="flex items-center space-x-2 p-1 bg-gray-100 rounded-full border">
+                            <Button onClick={() => setUseSimpleText(false)} className={clsx("px-4 text-md transition-all duration-200", !useSimpleText ? 'bg-white shadow rounded-full text-gray-800' : 'bg-transparent text-gray-500')}>Letter</Button>
+                            <Button onClick={() => setUseSimpleText(true)} className={clsx("px-4 text-md transition-all duration-200", useSimpleText ? 'bg-white shadow rounded-full text-gray-800' : 'bg-transparent text-gray-500')}>Example</Button>
                         </div>
+                         {/* --- END OF CORRECTION --- */}
+
                     </div>
                     <div className="flex items-center justify-between">
                         <Button onClick={() => setCurrentIndex(i => i - 1)} disabled={currentIndex === 0} className="bg-gray-200 text-gray-700 hover:bg-gray-300">Prev</Button>
@@ -446,7 +351,7 @@ const EnglishGame: React.FC<{ onClose: () => void; playAudio: (text: string) => 
     const [gameState, setGameState] = useState<'loading' | 'active' | 'finished' | 'error'>('loading');
     const [endMessage, setEndMessage] = useState('');
 
-    const generateQuiz = async () => {
+    const generateQuiz = useCallback(async () => {
         setGameState('loading');
         const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
         if (!apiKey) {
@@ -484,9 +389,9 @@ const EnglishGame: React.FC<{ onClose: () => void; playAudio: (text: string) => 
             console.error("Failed to generate or parse quiz:", error);
             setGameState('error');
         }
-    };
+    }, []);
     
-    useEffect(() => { generateQuiz(); }, []);
+    useEffect(() => { generateQuiz(); }, [generateQuiz]);
     
     const handleAnswer = (selectedOption: string) => {
         if (feedback) return;
@@ -551,7 +456,7 @@ const MathsGame: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const gameAreaRef = useRef<HTMLDivElement>(null);
     const intervalsRef = useRef<NodeJS.Timeout[]>([]);
 
-    const startGame = () => {
+    const startGame = useCallback(() => {
         setScore(0);
         setCatchCount(0);
         setLives(5);
@@ -564,12 +469,12 @@ const MathsGame: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             setBubbles(prev => [...prev, { id: Date.now(), value: Math.ceil(Math.random() * 5), left: `${Math.random() * 90}%`, top: -50 }]);
         }, 1200);
         intervalsRef.current.push(bubbleInterval);
-    };
+    }, []);
 
     useEffect(() => {
         startGame();
         return () => { intervalsRef.current.forEach(clearInterval); };
-    }, []);
+    }, [startGame]);
 
     useEffect(() => {
         if (lives <= 0 && !gameOver) {
@@ -652,6 +557,214 @@ const Bubble: React.FC<{ id: number; value: number; left: string; onPop: (id: nu
     return <div onMouseDown={handleMouseDown} className="absolute text-3xl font-bold text-white bg-green-500 rounded-full w-14 h-14 flex items-center justify-center cursor-pointer select-none" style={{ left, top: `${top}px` }}>{value}</div>;
 };
 
+
+const ReadAlongStory: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+    const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
+    const [currentWordInSentence, setCurrentWordInSentence] = useState(0);
+    const [volume, setVolume] = useState(0.8);
+    const [rate, setRate] = useState(0.9);
+    const [isMuted, setIsMuted] = useState(false);
+
+    const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+    const isSpeakingRef = useRef(false);
+
+    useEffect(() => {
+        return () => {
+            window.speechSynthesis.cancel();
+            isSpeakingRef.current = false;
+        };
+    }, []);
+
+    const speakSentence = (sentenceIndex: number) => {
+        if (!selectedStory || sentenceIndex >= selectedStory.sentences.length) {
+            setIsPlaying(false);
+            isSpeakingRef.current = false;
+            return;
+        }
+
+        const sentence = selectedStory.sentences[sentenceIndex];
+        const utterance = new SpeechSynthesisUtterance(sentence);
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(v => v.name.includes('Google US English') || v.name.includes('Microsoft Zira') || v.name.includes('Samantha') || (v.lang.startsWith('en-') && v.name.includes('Female')));
+        
+        if (preferredVoice) utterance.voice = preferredVoice;
+        
+        utterance.rate = rate;
+        utterance.pitch = 1.05;
+        utterance.volume = isMuted ? 0 : volume;
+        utterance.lang = 'en-US';
+
+        let wordIndex = 0;
+        utterance.onboundary = (event) => {
+            if (event.name === 'word' && isSpeakingRef.current) {
+                setCurrentWordInSentence(wordIndex);
+                wordIndex++;
+            }
+        };
+
+        utterance.onstart = () => {
+            setCurrentSentenceIndex(sentenceIndex);
+            setCurrentWordInSentence(0);
+        };
+
+        utterance.onend = () => {
+            if (isSpeakingRef.current) {
+                setTimeout(() => speakSentence(sentenceIndex + 1), 300);
+            }
+        };
+
+        utterance.onerror = (event) => {
+            console.error('Speech synthesis error:', event);
+            setIsPlaying(false);
+            isSpeakingRef.current = false;
+        };
+
+        window.speechSynthesis.speak(utterance);
+        utteranceRef.current = utterance;
+    };
+
+    const handlePlayPause = () => {
+        if (!selectedStory) return;
+        if (isPlaying) {
+            window.speechSynthesis.cancel();
+            setIsPlaying(false);
+            isSpeakingRef.current = false;
+        } else {
+            setIsPlaying(true);
+            isSpeakingRef.current = true;
+            speakSentence(currentSentenceIndex);
+        }
+    };
+
+    const handleRestart = () => {
+        window.speechSynthesis.cancel();
+        setCurrentSentenceIndex(0);
+        setCurrentWordInSentence(0);
+        setIsPlaying(false);
+        isSpeakingRef.current = false;
+    };
+
+    const getTotalProgress = () => {
+        if (!selectedStory) return 0;
+        let totalWords = selectedStory.sentences.reduce((acc, s) => acc + s.split(/\s+/).length, 0);
+        let currentWords = 0;
+        selectedStory.sentences.forEach((sentence, idx) => {
+            const wordCount = sentence.split(/\s+/).length;
+            if (idx < currentSentenceIndex) {
+                currentWords += wordCount;
+            } else if (idx === currentSentenceIndex) {
+                currentWords += currentWordInSentence;
+            }
+        });
+        return totalWords > 0 ? (currentWords / totalWords) * 100 : 0;
+    };
+
+    if (!selectedStory) {
+        return (
+            <div className="max-w-6xl mx-auto px-4 py-8 animate-in fade-in duration-500">
+                <Button onClick={onClose} className="mb-8 bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2"><ArrowLeft size={16} /> Back to Story Menu</Button>
+                <div className="text-center mb-12"><h1 className="text-5xl font-black text-gray-800 mb-4">📖 Read-Along Stories</h1><p className="text-2xl text-gray-600 font-semibold">Choose a story and follow along as the words light up!</p></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {stories.map((story) => (
+                        <Card key={story.id} onClick={() => setSelectedStory(story)} className="cursor-pointer hover:scale-105 transition-transform duration-300 border-4 border-purple-200 hover:border-purple-400 overflow-hidden shadow-xl">
+                            <img src={story.coverImage} alt={story.title} className="w-full h-64 object-cover" />
+                            <CardContent className="p-6 bg-gradient-to-br from-purple-50 to-pink-50"><h3 className="text-2xl font-bold text-purple-700 mb-2">{story.title}</h3><p className="text-gray-600 font-medium">by {story.author}</p></CardContent>
+                        </Card>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    const progress = getTotalProgress();
+
+    return (
+        <div className="max-w-5xl mx-auto px-4 py-8 animate-in fade-in duration-500">
+            <Button onClick={() => { window.speechSynthesis.cancel(); setSelectedStory(null); }} className="mb-6 bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2"><ArrowLeft size={16} /> Back to Library</Button>
+            <Card className="border-4 border-purple-300 shadow-2xl overflow-hidden">
+                <div className="bg-gradient-to-r from-purple-400 via-pink-400 to-purple-500 p-6 text-white"><h2 className="text-4xl font-black mb-2">{selectedStory.title}</h2><p className="text-xl opacity-90">by {selectedStory.author}</p></div>
+                <CardContent className="p-8">
+                    <div className="bg-gradient-to-br from-yellow-50 to-orange-50 p-8 rounded-2xl mb-6 min-h-[400px] border-4 border-yellow-200 shadow-inner">
+                        <div className="text-3xl leading-relaxed font-semibold text-gray-800 space-y-4">
+                            {selectedStory.sentences.map((sentence, sentenceIdx) => (
+                                <p key={sentenceIdx} className="inline">
+                                    {sentence.split(/\s+/).map((word, wordIdx) => (
+                                        <span key={`${sentenceIdx}-${wordIdx}`} className={clsx("inline-block transition-all duration-200 px-2 py-1 rounded-lg mx-1", { 'bg-green-400 text-white scale-110 font-bold shadow-lg transform -translate-y-1': sentenceIdx === currentSentenceIndex && wordIdx === currentWordInSentence, 'text-gray-400': sentenceIdx < currentSentenceIndex || (sentenceIdx === currentSentenceIndex && wordIdx < currentWordInSentence) })}>{word}</span>
+                                    ))}
+                                    {' '}
+                                </p>
+                            ))}
+                        </div>
+                    </div>
+                     <div className="space-y-6">
+                         <div className="flex items-center justify-center gap-4">
+                            <Button onClick={handleRestart} variant="outline" size="lg" className="rounded-full w-16 h-16 border-2 hover:bg-gray-100"><RotateCcw size={28} /></Button>
+                            <Button onClick={handlePlayPause} size="lg" className="rounded-full w-24 h-24 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-2xl transform hover:scale-105 transition-transform">{isPlaying ? <Pause size={40} /> : <Play size={40} className="ml-1" />}</Button>
+                            <Button onClick={() => setIsMuted(!isMuted)} variant="outline" size="lg" className="rounded-full w-16 h-16 border-2 hover:bg-gray-100">{isMuted ? <VolumeX size={28} /> : <Volume2 size={28} />}</Button>
+                         </div>
+                         <div className="bg-white p-4 rounded-xl border-2 border-gray-200 shadow-sm"><div className="flex items-center gap-4"><Volume2 size={20} className="text-gray-600" /><div className="flex-1"><p className="text-sm font-semibold text-gray-600 mb-2">Volume</p><Slider value={[isMuted ? 0 : volume]} max={1} step={0.1} onValueChange={(val) => setVolume(val[0])} disabled={isMuted} /></div><span className="text-sm font-bold text-gray-600 w-12 text-right">{Math.round((isMuted ? 0 : volume) * 100)}%</span></div></div>
+                         <div className="bg-white p-4 rounded-xl border-2 border-gray-200 shadow-sm"><div className="flex items-center gap-4"><Gauge size={20} className="text-gray-600" /><div className="flex-1"><p className="text-sm font-semibold text-gray-600 mb-2">Reading Speed</p><Slider value={[rate]} min={0.5} max={1.5} step={0.1} onValueChange={(val) => setRate(val[0])} /></div><span className="text-sm font-bold text-gray-600 w-12 text-right">{rate.toFixed(1)}x</span></div></div>
+                     </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
+const InteractiveStory: React.FC<{ onBack: () => void; playAudio: (text: string | string[]) => void; }> = ({ onBack, playAudio }) => {
+    const story = [ { id: 1, text: "Leo the lion was walking through the jungle when he saw a small, crying monkey sitting under a big leaf. What should Leo do?", choices: [ { text: "Ask the monkey why it's crying.", goTo: 2 }, { text: "Ignore the monkey and keep walking.", goTo: 3 } ] }, { id: 2, text: "Leo walked over and gently asked, 'What's wrong, little one?' The monkey sniffled, 'I lost my favorite banana!' How should Leo help?", choices: [ { text: "Climb a tall tree to look for it.", goTo: 4 }, { text: "Ask other jungle animals for help.", goTo: 5 } ] }, { id: 3, text: "Leo decided he was too busy to stop and walked right past the crying monkey. As he walked, the jungle felt quiet and he started to feel a little lonely.", choices: [ { text: "Go back and help the monkey.", goTo: 6 }, { text: "Keep walking by himself.", goTo: 7 } ] }, { id: 4, text: "Leo bravely climbed a very tall tree! From the top, he could see everything. 'I see it!' he roared. 'The banana is near the sparkling river!'", choices: [ { text: "Hooray! Let's go to the river!", goTo: 8 } ] }, { id: 5, text: "Leo found a wise old parrot. 'Have you seen a banana?' Leo asked. The parrot squawked, 'Yes! I saw a silly toucan drop one near the sparkling river!'", choices: [ { text: "Thank the parrot and go to the river.", goTo: 8 } ] }, { id: 6, text: "Leo felt bad for not helping. He turned around and went back to the monkey. 'I'm sorry I walked past,' he said. 'I want to help you find your banana.'", choices: [ { text: "Let's work together!", goTo: 2 } ] }, { id: 7, text: "Leo kept walking alone. He finished his walk, but he couldn't stop thinking about the sad little monkey. He learned that helping others feels much better than walking alone. The End.", choices: [ { text: "Play Again", goTo: 1 } ] }, { id: 8, text: "Leo and the monkey raced to the river and found the banana! The monkey was so happy, it shared the banana with Leo. They ate their snack together and became the best of friends. The End.", choices: [ { text: "Play Again", goTo: 1 } ] }, ];
+    const [currentPage, setCurrentPage] = useState(story[0]);
+
+    useEffect(() => { playAudio(currentPage.text); }, [currentPage, playAudio]);
+
+    const handleChoice = (goToId: number) => {
+        const nextPage = story.find(p => p.id === goToId);
+        if (nextPage) setCurrentPage(nextPage);
+    };
+
+    return (
+        <div className="max-w-4xl mx-auto px-4 animate-in fade-in duration-500">
+            <Button onClick={onBack} className="mb-8 bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2"><ArrowLeft size={16} /> Back to Story Menu</Button>
+            <Card className="p-8 text-center border-purple-300 border-2">
+                <img src="https://placehold.co/600x300/e9d5ff/a855f7?text=Interactive+Adventure" alt="Story Illustration" className="rounded-lg mx-auto mb-6" />
+                <p className="text-2xl text-gray-800 mb-8 min-h-[100px]">{currentPage.text}</p>
+                <div className="flex flex-col md:flex-row gap-4 justify-center">
+                    {currentPage.choices.map((choice) => ( <Button key={choice.goTo + currentPage.id} onClick={() => handleChoice(choice.goTo)} className="bg-purple-500 hover:bg-purple-600 text-white text-lg py-6 flex-1">{choice.text}</Button> ))}
+                </div>
+            </Card>
+        </div>
+    );
+};
+
+const StoryTimeSelection: React.FC<{ onNavigate: (view: View) => void, onBack: () => void }> = ({ onNavigate, onBack }) => (
+    <div className="max-w-4xl mx-auto px-4 animate-in fade-in duration-500">
+         <Button onClick={onBack} className="mb-8 bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2">
+            <ArrowLeft size={16} /> Back to Dashboard
+        </Button>
+        <h1 className="text-4xl text-center text-gray-800 font-bold mb-2">Story Time</h1>
+         <p className="text-xl text-center text-gray-600 mb-12">How would you like to enjoy a story today?</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Card onClick={() => onNavigate('read-along-story')} className="p-6 border-purple-400 bg-purple-50 hover:bg-purple-100 cursor-pointer">
+                <div className="flex flex-col items-center text-center">
+                    <BookText size={48} className="text-purple-600 mb-4" />
+                    <h2 className="text-3xl font-bold text-purple-700 mb-3">Read-Along Stories</h2>
+                    <p className="text-lg text-gray-700">Listen to stories with words that light up as they are read to you. Perfect for following along!</p>
+                </div>
+            </Card>
+            <Card onClick={() => onNavigate('interactive-story')} className="p-6 border-indigo-400 bg-indigo-50 hover:bg-indigo-100 cursor-pointer">
+                <div className="flex flex-col items-center text-center">
+                    <Zap size={48} className="text-indigo-600 mb-4" />
+                    <h2 className="text-3xl font-bold text-indigo-700 mb-3">Interactive Adventures</h2>
+                    <p className="text-lg text-gray-700">You decide what happens next! Make choices and see where the story takes you.</p>
+                </div>
+            </Card>
+        </div>
+    </div>
+);
+
+
 // --- MAIN CHILD DASHBOARD COMPONENT ---
 export function ChildDashboard() {
     const [currentView, setCurrentView] = useState<View>('child-home');
@@ -668,12 +781,26 @@ export function ChildDashboard() {
     const cooldownTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     const { playAudio, isReady } = useAudioCompanion();
+    const hasWelcomed = useRef(false);
 
-    useEffect(() => {
-        if (isReady) {
-            playAudio("Hi Neha! It's me, Vidya! I'm so happy to see you. Are you ready for a fun learning adventure today?");
-        }
-    }, [isReady]); // This now runs only when the audio system is ready
+     useEffect(() => {
+        const handleFirstInteraction = () => {
+            if (isReady && !hasWelcomed.current) {
+                playAudio("Hi Neha! It's me, Vidya! I'm so happy to see you. Are you ready for a fun learning adventure today?");
+                hasWelcomed.current = true;
+            }
+            window.removeEventListener('click', handleFirstInteraction);
+            window.removeEventListener('keydown', handleFirstInteraction);
+        };
+
+        window.addEventListener('click', handleFirstInteraction);
+        window.addEventListener('keydown', handleFirstInteraction);
+
+        return () => {
+            window.removeEventListener('click', handleFirstInteraction);
+            window.removeEventListener('keydown', handleFirstInteraction);
+        };
+    }, [isReady, playAudio]);
 
     useEffect(() => {
         if (isGameTimerRunning && gameTimeRemaining > 0) {
@@ -710,13 +837,13 @@ export function ChildDashboard() {
 
     const handleNavigate = (view: View) => {
         if (view === 'module-selection') {
-            playAudio([
-                "Great choice! It's time to learn something new.",
-                "You can choose English Fun to play with letters and words, or Math Adventures to explore numbers. What would you like to learn today?"
-            ]);
+            playAudio(["Great choice! It's time to learn something new.", "You can choose English Fun to play with letters and words, or Math Adventures to explore numbers. What would you like to learn today?"]);
         }
         if (view === 'game-selection') {
             playAudio("Let's play a game!");
+        }
+        if (view === 'story-time'){
+            playAudio("Awesome, let's have an adventure!");
         }
         setCurrentView(view);
     };
@@ -725,11 +852,16 @@ export function ChildDashboard() {
         if (typeof window.speechSynthesis !== 'undefined') {
             speechSynthesis.cancel();
         }
-        // This logic smartly decides where to go back to.
+        
         if (currentView === 'module-selection' && selectedSubjectKey) {
-            setSelectedSubjectKey(null); // Go from modules list back to subject list
-        } else {
-            setCurrentView('child-home'); // Go from subjects or games list back to dashboard
+            setSelectedSubjectKey(null); 
+        } else if (currentView === 'module') {
+            setCurrentView('module-selection');
+        } else if (currentView === 'interactive-story' || currentView === 'read-along-story'){
+            setCurrentView('story-time');
+        }
+        else {
+            setCurrentView('child-home');
         }
     };
 
@@ -751,6 +883,9 @@ export function ChildDashboard() {
     };
     
     const handleCloseGame = () => {
+        if (typeof window.speechSynthesis !== 'undefined') {
+            speechSynthesis.cancel();
+        }
         setIsGameTimerRunning(false);
         setCurrentView('game-selection');
     };
@@ -774,7 +909,7 @@ export function ChildDashboard() {
                             />;
                 }
             case 'module':
-                return <LearningModule deck={currentDeck} onClose={() => setCurrentView('module-selection')} />;
+                return <LearningModule deck={currentDeck} onClose={handleBack} />;
             case 'game-selection':
                 return <GameSelection 
                             onStartGame={handleStartGame} 
@@ -787,13 +922,11 @@ export function ChildDashboard() {
             case 'maths-game':
                 return <MathsGame onClose={handleCloseGame} />;
             case 'story-time':
-            return (
-                <StoryTime
-                onBack={handleBack}
-                playAudio={playAudio}
-                onClose={() => setCurrentView('child-home')}
-                />
-            );
+                 return <StoryTimeSelection onNavigate={handleNavigate} onBack={handleBack} />;
+            case 'interactive-story':
+                return <InteractiveStory onBack={handleBack} playAudio={playAudio} />;
+            case 'read-along-story':
+                return <ReadAlongStory onClose={handleBack} />;
 
             default:
                 return <DashboardHome onNavigate={handleNavigate} />;
@@ -806,3 +939,4 @@ export function ChildDashboard() {
         </div>
     );
 }
+

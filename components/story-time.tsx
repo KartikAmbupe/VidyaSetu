@@ -110,69 +110,68 @@ export function StoryTime({ onClose }: { onClose: () => void }) {
   }, []);
 
   // Speak story sentence by sentence with word tracking
-  const speakSentence = (sentenceIndex: number) => {
+// In your story-time.tsx file
+
+// Speak story sentence by sentence with word tracking
+const speakSentence = (sentenceIndex: number) => {
     if (!selectedStory || sentenceIndex >= selectedStory.sentences.length) {
-      setIsPlaying(false);
-      isSpeakingRef.current = false;
-      return;
+        setIsPlaying(false);
+        isSpeakingRef.current = false;
+        return;
     }
 
     const sentence = selectedStory.sentences[sentenceIndex];
-    const words = sentence.split(/\s+/);
-    let wordIndex = 0;
-
     const utterance = new SpeechSynthesisUtterance(sentence);
     
     // Get available voices
     const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(
-      voice => 
-        voice.name.includes('Google US English') ||
-        voice.name.includes('Microsoft Zira') ||
-        voice.name.includes('Samantha') ||
-        (voice.lang.startsWith('en-') && voice.name.includes('Female'))
-    );
+
+    // --- THIS IS THE UPDATED VOICE SELECTION LOGIC ---
+    const preferredVoice =
+        voices.find(v => v.name === 'Microsoft Heera - English (India)') ||
+        voices.find(v => v.lang === 'en-IN') ||
+        voices.find(v => v.name.includes('Google') && v.lang.startsWith('en-'));
+    // --- END OF UPDATE ---
     
     if (preferredVoice) {
-      utterance.voice = preferredVoice;
+        utterance.voice = preferredVoice;
     }
     
     utterance.rate = rate;
     utterance.pitch = 1.05;
     utterance.volume = isMuted ? 0 : volume;
-    utterance.lang = 'en-US';
+    utterance.lang = 'en-IN';
 
-    // Track word boundaries
+    let wordIndex = 0;
     utterance.onboundary = (event) => {
-      if (event.name === 'word' && isSpeakingRef.current) {
-        setCurrentWordInSentence(wordIndex);
-        wordIndex++;
-      }
+        if (event.name === 'word' && isSpeakingRef.current) {
+            setCurrentWordInSentence(wordIndex);
+            wordIndex++;
+        }
     };
 
     utterance.onstart = () => {
-      setCurrentSentenceIndex(sentenceIndex);
-      setCurrentWordInSentence(0);
+        setCurrentSentenceIndex(sentenceIndex);
+        setCurrentWordInSentence(0);
     };
 
     utterance.onend = () => {
-      if (isSpeakingRef.current) {
-        // Move to next sentence
-        setTimeout(() => {
-          speakSentence(sentenceIndex + 1);
-        }, 300); // Small pause between sentences
-      }
+        if (isSpeakingRef.current) {
+            setTimeout(() => {
+                speakSentence(sentenceIndex + 1);
+            }, 300);
+        }
     };
 
     utterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event);
-      setIsPlaying(false);
-      isSpeakingRef.current = false;
+        console.error('Speech synthesis error:', event);
+        setIsPlaying(false);
+        isSpeakingRef.current = false;
     };
 
     window.speechSynthesis.speak(utterance);
     utteranceRef.current = utterance;
-  };
+};
 
   const handlePlayPause = () => {
     if (!selectedStory) return;
