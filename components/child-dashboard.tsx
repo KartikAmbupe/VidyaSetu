@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAudioCompanion } from "@/hooks/useAudioCompanion";
 import { StoryTime } from "@/components/story-time";
-
 // --- TYPE DEFINITIONS ---
 type View = 'child-home' | 'module-selection' | 'module' | 'game-selection' | 'english-game' | 'maths-game' | 'story-time';
 
@@ -135,7 +135,7 @@ const DashboardHome: React.FC<{ onNavigate: (view: View) => void }> = ({ onNavig
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                     <div className="lg:col-span-3">
                         <div className="mb-8 text-center lg:text-left">
-                            <h1 className="text-5xl font-black text-gray-800 mb-4">Welcome back, Alex! 🎉</h1>
+                            <h1 className="text-5xl font-black text-gray-800 mb-4">Welcome back, Neha! 🎉</h1>
                             <p className="text-2xl text-gray-600 font-semibold">Ready for a learning adventure?</p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -265,15 +265,147 @@ const ModuleSelection: React.FC<{ subject: Subject; onStartModule: (deck: CardDa
     </div>
 );
 
+const StoryTime: React.FC<{ onBack: () => void; playAudio: (text: string | string[]) => void; }> = ({ onBack, playAudio }) => {
+    const story = [
+        { 
+            id: 1, 
+            text: "Leo the lion was walking through the jungle when he saw a small, crying monkey sitting under a big leaf. What should Leo do?",
+            choices: [
+                { text: "Ask the monkey why it's crying.", goTo: 2 }, 
+                { text: "Ignore the monkey and keep walking.", goTo: 3 }
+            ] 
+        },
+        { 
+            id: 2, 
+            text: "Leo walked over and gently asked, 'What's wrong, little one?' The monkey sniffled, 'I lost my favorite banana!' How should Leo help?",
+            choices: [
+                { text: "Climb a tall tree to look for it.", goTo: 4 }, 
+                { text: "Ask other jungle animals for help.", goTo: 5 }
+            ] 
+        },
+        { 
+            id: 3, 
+            text: "Leo decided he was too busy to stop and walked right past the crying monkey. As he walked, the jungle felt quiet and he started to feel a little lonely.",
+            choices: [
+                { text: "Go back and help the monkey.", goTo: 6 },
+                { text: "Keep walking by himself.", goTo: 7 }
+            ] 
+        },
+        { 
+            id: 4, 
+            text: "Leo bravely climbed a very tall tree! From the top, he could see everything. 'I see it!' he roared. 'The banana is near the sparkling river!'",
+            choices: [
+                { text: "Hooray! Let's go to the river!", goTo: 8 }
+            ] 
+        },
+        { 
+            id: 5, 
+            text: "Leo found a wise old parrot. 'Have you seen a banana?' Leo asked. The parrot squawked, 'Yes! I saw a silly toucan drop one near the sparkling river!'",
+            choices: [
+                { text: "Thank the parrot and go to the river.", goTo: 8 }
+            ] 
+        },
+        {
+            id: 6,
+            text: "Leo felt bad for not helping. He turned around and went back to the monkey. 'I'm sorry I walked past,' he said. 'I want to help you find your banana.'",
+            choices: [
+                { text: "Let's work together!", goTo: 2 }
+            ]
+        },
+        { 
+            id: 7, 
+            text: "Leo kept walking alone. He finished his walk, but he couldn't stop thinking about the sad little monkey. He learned that helping others feels much better than walking alone. The End.",
+            choices: [
+                { text: "Play Again", goTo: 1 }
+            ] 
+        },
+        { 
+            id: 8, 
+            text: "Leo and the monkey raced to the river and found the banana! The monkey was so happy, it shared the banana with Leo. They ate their snack together and became the best of friends. The End.",
+            choices: [
+                { text: "Play Again", goTo: 1 }
+            ] 
+        },
+    ];
+
+    const [currentPage, setCurrentPage] = useState(story[0]);
+
+    useEffect(() => {
+        playAudio(currentPage.text);
+    }, [currentPage, playAudio]);
+
+    const handleChoice = (goToId: number) => {
+        const nextPage = story.find(p => p.id === goToId);
+        if (nextPage) {
+            setCurrentPage(nextPage);
+        }
+    };
+
+    return (
+        <div className="max-w-4xl mx-auto px-4 animate-in fade-in duration-500">
+            <Button onClick={onBack} className="mb-8 bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2">
+                <ArrowLeft size={16} /> Back to Dashboard
+            </Button>
+            <Card className="p-8 text-center border-purple-300 border-2">
+                <img src="https://placehold.co/600x300/e9d5ff/a855f7?text=Story+Adventure" alt="Story Illustration" className="rounded-lg mx-auto mb-6" />
+                <p className="text-2xl text-gray-800 mb-8 min-h-[100px]">{currentPage.text}</p>
+                <div className="flex flex-col md:flex-row gap-4 justify-center">
+                    {currentPage.choices.map((choice) => (
+                        <Button key={choice.goTo + currentPage.id} onClick={() => handleChoice(choice.goTo)} className="bg-purple-500 hover:bg-purple-600 text-white text-lg py-6 flex-1">
+                            {choice.text}
+                        </Button>
+                    ))}
+                </div>
+            </Card>
+        </div>
+    );
+};
+
 const LearningModule: React.FC<{ deck: CardData[]; onClose: () => void }> = ({ deck, onClose }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [useSimpleText, setUseSimpleText] = useState(false);
+    const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
     const card = deck[currentIndex];
-    
+
+    // Effect to load voices
+    useEffect(() => {
+        const loadVoices = () => {
+            setVoices(window.speechSynthesis.getVoices());
+        };
+        if (typeof window.speechSynthesis !== 'undefined') {
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+            loadVoices();
+        }
+        return () => {
+            if (typeof window.speechSynthesis !== 'undefined') {
+                window.speechSynthesis.onvoiceschanged = null;
+            }
+        };
+    }, []);
+
+    // Effect to cancel speech on unmount
+    useEffect(() => {
+        return () => {
+            if (typeof window.speechSynthesis !== 'undefined') {
+                speechSynthesis.cancel();
+            }
+        };
+    }, []);
+
     const speak = (text: string) => {
-        if (typeof window.speechSynthesis === 'undefined') return;
+        if (typeof window.speechSynthesis === 'undefined' || voices.length === 0) {
+            console.error("TTS not supported or voices not loaded.");
+            return;
+        }
         speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
+
+        const preferredVoice = 
+            voices.find(v => v.name === 'Microsoft Heera - English (India)') ||
+            voices.find(v => v.lang === 'en-IN') ||
+            voices.find(v => v.name.includes('Google') && v.lang.startsWith('en-'));
+
+        utterance.voice = preferredVoice || voices[0];
         utterance.lang = 'en-US';
         speechSynthesis.speak(utterance);
     };
@@ -281,7 +413,7 @@ const LearningModule: React.FC<{ deck: CardData[]; onClose: () => void }> = ({ d
     const textToDisplay = useSimpleText ? card.simpleText : card.text;
 
     return (
-         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in">
             <Card className="relative w-full max-w-2xl p-8 flex flex-col md:flex-row items-center gap-8 border-gray-200">
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-3xl">&times;</button>
                 <img src="https://placehold.co/150x150/f59e0b/FFFFFF?text=Leo" alt="Leo the Lion" className="rounded-full w-24 h-24 md:w-32 md:h-32 border-4 border-amber-200" />
@@ -306,7 +438,7 @@ const LearningModule: React.FC<{ deck: CardData[]; onClose: () => void }> = ({ d
     );
 };
 
-const EnglishGame: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const EnglishGame: React.FC<{ onClose: () => void; playAudio: (text: string) => void; }> = ({ onClose, playAudio }) => {
     const [questions, setQuestions] = useState<EnglishQuestion[]>([]);
     const [questionIndex, setQuestionIndex] = useState(0);
     const [score, setScore] = useState(0);
@@ -370,6 +502,7 @@ const EnglishGame: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             if (questionIndex < questions.length - 1) {
                 setQuestionIndex(prev => prev + 1);
             } else {
+                playAudio("Wow, you did an amazing job on that quiz!");
                 setEndMessage(quizEndMessages[Math.floor(Math.random() * quizEndMessages.length)]);
                 setGameState('finished');
             }
@@ -534,6 +667,14 @@ export function ChildDashboard() {
     const gameTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const cooldownTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+    const { playAudio, isReady } = useAudioCompanion();
+
+    useEffect(() => {
+        if (isReady) {
+            playAudio("Hi Neha! It's me, Vidya! I'm so happy to see you. Are you ready for a fun learning adventure today?");
+        }
+    }, [isReady]); // This now runs only when the audio system is ready
+
     useEffect(() => {
         if (isGameTimerRunning && gameTimeRemaining > 0) {
             gameTimerIntervalRef.current = setInterval(() => {
@@ -568,10 +709,40 @@ export function ChildDashboard() {
     }, [playtimeCooldownEnd]);
 
     const handleNavigate = (view: View) => {
+        if (view === 'module-selection') {
+            playAudio([
+                "Great choice! It's time to learn something new.",
+                "You can choose English Fun to play with letters and words, or Math Adventures to explore numbers. What would you like to learn today?"
+            ]);
+        }
+        if (view === 'game-selection') {
+            playAudio("Let's play a game!");
+        }
         setCurrentView(view);
     };
 
-     const handleStartGame = (game: 'english-game' | 'maths-game') => {
+    const handleBack = () => {
+        if (typeof window.speechSynthesis !== 'undefined') {
+            speechSynthesis.cancel();
+        }
+        // This logic smartly decides where to go back to.
+        if (currentView === 'module-selection' && selectedSubjectKey) {
+            setSelectedSubjectKey(null); // Go from modules list back to subject list
+        } else {
+            setCurrentView('child-home'); // Go from subjects or games list back to dashboard
+        }
+    };
+
+    const handleSubjectSelect = (key: keyof SubjectsData) => {
+        setSelectedSubjectKey(key);
+        if (key === 'english') {
+            playAudio("English Fun it is! Awesome! In here, we can learn all about letters, action words, and so much more. Which adventure will you pick first?");
+        } else if (key === 'maths') {
+            playAudio("Math Adventures, let's go! We're going to count numbers and learn how to play along with numbers. What do you want to start with?");
+        }
+    };
+    
+    const handleStartGame = (game: 'english-game' | 'maths-game') => {
         if (playtimeCooldownEnd || gameTimeRemaining <= 0) return;
         if (!isGameTimerRunning) {
             setIsGameTimerRunning(true);
@@ -589,24 +760,41 @@ export function ChildDashboard() {
             case 'child-home':
                 return <DashboardHome onNavigate={handleNavigate} />;
             case 'module-selection':
-                 const subject = selectedSubjectKey ? subjectsData[selectedSubjectKey] : null;
-                if (!subject) return <SubjectSelection onSelectSubject={(key) => {setSelectedSubjectKey(key);}} onBack={() => setCurrentView('child-home')} />;
-                return <ModuleSelection subject={subject} onStartModule={(deck) => {setCurrentDeck(deck); setCurrentView('module');}} onBack={() => {setSelectedSubjectKey(null); setCurrentView('child-home');}} />;
+                if (selectedSubjectKey) {
+                    const subject = subjectsData[selectedSubjectKey];
+                    return <ModuleSelection 
+                                subject={subject} 
+                                onStartModule={(deck) => { setCurrentDeck(deck); setCurrentView('module'); }} 
+                                onBack={handleBack} 
+                            />;
+                } else {
+                    return <SubjectSelection 
+                                onSelectSubject={handleSubjectSelect} 
+                                onBack={handleBack} 
+                            />;
+                }
             case 'module':
                 return <LearningModule deck={currentDeck} onClose={() => setCurrentView('module-selection')} />;
             case 'game-selection':
                 return <GameSelection 
                             onStartGame={handleStartGame} 
-                            onBack={() => setCurrentView('child-home')}
+                            onBack={handleBack}
                             gameTimeRemaining={gameTimeRemaining}
                             playtimeCooldownEnd={playtimeCooldownEnd}
-                        />
+                        />;
             case 'english-game':
-                return <EnglishGame onClose={handleCloseGame} />;
+                return <EnglishGame onClose={handleCloseGame} playAudio={playAudio} />;
             case 'maths-game':
                 return <MathsGame onClose={handleCloseGame} />;
             case 'story-time':
-                return <StoryTime onClose={() => setCurrentView('child-home')} />;
+            return (
+                <StoryTime
+                onBack={handleBack}
+                playAudio={playAudio}
+                onClose={() => setCurrentView('child-home')}
+                />
+            );
+
             default:
                 return <DashboardHome onNavigate={handleNavigate} />;
         }
