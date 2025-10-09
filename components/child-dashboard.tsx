@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAudioCompanion } from "@/hooks/useAudioCompanion";
 import { Slider } from "@/components/ui/slider";
+import FontToggle  from "./font-toggle";
 
 // --- TYPE DEFINITIONS ---
 type View = 'child-home' | 'module-selection' | 'module' | 'game-selection' | 'english-game' | 'maths-game' | 'story-time' | 'interactive-story' | 'read-along-story';
@@ -171,7 +172,35 @@ const DashboardHome: React.FC<{ onNavigate: (view: View) => void }> = ({ onNavig
                     </div>
                     <div className="space-y-8">
                         <Card className="border-2 border-pink-200 shadow-xl"><CardContent className="p-6"><h3 className="text-2xl font-black text-gray-800 mb-4 flex items-center"><Heart className="h-6 w-6 text-pink-500 mr-2"/> How are you?</h3><div className="grid grid-cols-3 gap-2">{moods.map(mood => <Button key={mood.value} variant={selectedMood === mood.value ? "default" : "outline"} className={clsx("h-16 text-lg", mood.color, selectedMood === mood.value && "ring-2 ring-pink-400")} onClick={() => setSelectedMood(mood.value)}><span className="text-3xl">{mood.emoji}</span></Button>)}</div></CardContent></Card>
-                        <Card className="border-2 border-blue-200 shadow-xl"><CardContent className="p-6"><h3 className="text-2xl font-black text-gray-800 mb-4">Quick Actions</h3><div className="space-y-3"><Dialog><DialogTrigger asChild><Button variant="outline" className="w-full justify-start text-lg py-5"><Settings className="mr-3"/> Settings</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Settings</DialogTitle></DialogHeader><div className="p-4">App settings will be here.</div></DialogContent></Dialog><Button variant="outline" className="w-full justify-start text-lg py-5"><HelpCircle className="mr-3"/> Help</Button><Button variant="outline" className="w-full justify-start text-lg py-5 text-red-600 hover:bg-red-50 hover:text-red-700"><LogOut className="mr-3"/> Logout</Button></div></CardContent></Card>
+                        <Card className="border-2 border-blue-200 shadow-xl">
+                            <CardContent className="p-6">
+                                <h3 className="text-2xl font-black text-gray-800 mb-4">Quick Actions</h3>
+                                <div className="space-y-3">
+                                    <Dialog>
+                                        <DialogTrigger asChild>
+                                            <Button variant="outline" className="w-full justify-start text-lg py-5">
+                                                <Settings className="mr-3"/> Settings
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Settings</DialogTitle>
+                                            </DialogHeader>
+                                            <div className="p-4 space-y-4">
+                                                <p>Accessibility Options:</p>
+                                                <FontToggle />
+                                            </div>
+                                        </DialogContent>
+                                    </Dialog>
+                                    <Button variant="outline" className="w-full justify-start text-lg py-5">
+                                        <HelpCircle className="mr-3"/> Help
+                                    </Button>
+                                    <Button variant="outline" className="w-full justify-start text-lg py-5 text-red-600 hover:bg-red-50 hover:text-red-700">
+                                        <LogOut className="mr-3"/> Logout
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
             </div>
@@ -587,14 +616,14 @@ const ReadAlongStory: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         const sentence = selectedStory.sentences[sentenceIndex];
         const utterance = new SpeechSynthesisUtterance(sentence);
         const voices = window.speechSynthesis.getVoices();
-        const preferredVoice = voices.find(v => v.name.includes('Google US English') || v.name.includes('Microsoft Zira') || v.name.includes('Samantha') || (v.lang.startsWith('en-') && v.name.includes('Female')));
+        const preferredVoice = voices.find(v => v.name.includes('Google IN English') || v.name.includes('Microsoft Heera') || v.name.includes('Heera') || (v.lang.startsWith('en-') && v.name.includes('Female')));
         
         if (preferredVoice) utterance.voice = preferredVoice;
         
         utterance.rate = rate;
         utterance.pitch = 1.05;
         utterance.volume = isMuted ? 0 : volume;
-        utterance.lang = 'en-US';
+        utterance.lang = 'en-IN';
 
         let wordIndex = 0;
         utterance.onboundary = (event) => {
