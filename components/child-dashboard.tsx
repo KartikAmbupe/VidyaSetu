@@ -10,11 +10,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useAudioCompanion } from "@/hooks/useAudioCompanion";
 import { Slider } from "@/components/ui/slider";
 import FontToggle  from "./font-toggle";
-import MathAdventure from './quiz/MathAdventure'
-import EnglishFun from './quiz/MathAdventure'
+import AdaptiveLearningSuite from './quiz/AdaptiveLearningSuite';
 
 // --- TYPE DEFINITIONS ---
-type View = 'child-home' | 'module-selection' | 'module' | 'game-selection' | 'english-game' | 'maths-game' | 'story-time' | 'interactive-story' | 'read-along-story';
+type View = 'child-home' | 'module-selection' | 'module' | 'game-selection' | 'english-game' | 'maths-game' | 'story-time' | 'interactive-story' | 'read-along-story' | 'adaptive-quiz';
 
 interface CardData {
     image: string;
@@ -117,7 +116,7 @@ const DashboardHome: React.FC<{ onNavigate: (view: View) => void }> = ({ onNavig
     
     const mainActivities = [
         { title: "Start Learning", description: "Begin your magical learning adventure!", emoji: "🎓", color: "bg-gradient-to-br from-yellow-400 via-orange-400 to-red-500", hoverColor: "hover:from-yellow-300 hover:via-orange-300 hover:to-red-400", size: "large", tooltip: "Start your personalized learning path with fun activities!", view: 'module-selection' },
-        { title: "Take a Quiz", description: "Learn and earn rewards", emoji: "🧠", color: "bg-gradient-to-br from-red-400 via-pink-400 to-purple-500", hoverColor: "hover:from-red-300 hover:via-pink-300 hover:to-purple-400", size: "medium", tooltip: "Watch safe and fun educational videos!", view: 'child-home' },
+        { title: "Take a Quiz", description: "Learn and earn rewards", emoji: "🧠", color: "bg-gradient-to-br from-red-400 via-pink-400 to-purple-500", hoverColor: "hover:from-red-300 hover:via-pink-300 hover:to-purple-400", size: "medium", tooltip: "Time to test your skills !", view: 'adaptive-quiz' },
         { title: "Play a Game", description: "Interactive puzzles and quizzes!", emoji: "🧩", color: "bg-gradient-to-br from-green-400 via-teal-400 to-blue-500", hoverColor: "hover:from-green-300 hover:via-teal-300 hover:to-blue-400", size: "medium", tooltip: "Play fun games while learning new things!", view: 'game-selection' },
         { title: "Story Time", description: "Listen to amazing stories with read-along", emoji: "📖", color: "bg-gradient-to-br from-purple-400 via-indigo-400 to-blue-500", hoverColor: "hover:from-purple-300 hover:via-indigo-300 hover:to-blue-400", size: "medium", tooltip: "Listen to stories with word highlighting and voice reading!", view: 'story-time' },
         { title: "My Rewards", description: "See all your awesome badges and stickers!", emoji: "🏅", color: "bg-gradient-to-br from-amber-400 via-yellow-400 to-orange-500", hoverColor: "hover:from-amber-300 hover:via-yellow-300 hover:to-orange-400", size: "medium", tooltip: "Check out all the cool badges and stickers you've earned!", view: 'child-home' },
@@ -1098,6 +1097,13 @@ export function ChildDashboard() {
                 return <InteractiveStory onBack={handleBack} playAudio={playAudio} />;
             case 'read-along-story':
                 return <ReadAlongStory onClose={handleBack} />;
+
+            case 'adaptive-quiz':
+                return (
+                    <AdaptiveLearningSuite 
+                        onExit={() => handleNavigate('child-home')} 
+                    />
+                );
 
             default:
                 return <DashboardHome onNavigate={handleNavigate} />;
