@@ -10,6 +10,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useAudioCompanion } from "@/hooks/useAudioCompanion";
 import { Slider } from "@/components/ui/slider";
 import FontToggle  from "./font-toggle";
+import MathAdventure from './quiz/MathAdventure'
+import EnglishFun from './quiz/MathAdventure'
 
 // --- TYPE DEFINITIONS ---
 type View = 'child-home' | 'module-selection' | 'module' | 'game-selection' | 'english-game' | 'maths-game' | 'story-time' | 'interactive-story' | 'read-along-story';
@@ -115,7 +117,7 @@ const DashboardHome: React.FC<{ onNavigate: (view: View) => void }> = ({ onNavig
     
     const mainActivities = [
         { title: "Start Learning", description: "Begin your magical learning adventure!", emoji: "🎓", color: "bg-gradient-to-br from-yellow-400 via-orange-400 to-red-500", hoverColor: "hover:from-yellow-300 hover:via-orange-300 hover:to-red-400", size: "large", tooltip: "Start your personalized learning path with fun activities!", view: 'module-selection' },
-        { title: "Watch a Video", description: "Fun educational videos just for you", emoji: "📺", color: "bg-gradient-to-br from-red-400 via-pink-400 to-purple-500", hoverColor: "hover:from-red-300 hover:via-pink-300 hover:to-purple-400", size: "medium", tooltip: "Watch safe and fun educational videos!", view: 'child-home' },
+        { title: "Take a Quiz", description: "Learn and earn rewards", emoji: "🧠", color: "bg-gradient-to-br from-red-400 via-pink-400 to-purple-500", hoverColor: "hover:from-red-300 hover:via-pink-300 hover:to-purple-400", size: "medium", tooltip: "Watch safe and fun educational videos!", view: 'child-home' },
         { title: "Play a Game", description: "Interactive puzzles and quizzes!", emoji: "🧩", color: "bg-gradient-to-br from-green-400 via-teal-400 to-blue-500", hoverColor: "hover:from-green-300 hover:via-teal-300 hover:to-blue-400", size: "medium", tooltip: "Play fun games while learning new things!", view: 'game-selection' },
         { title: "Story Time", description: "Listen to amazing stories with read-along", emoji: "📖", color: "bg-gradient-to-br from-purple-400 via-indigo-400 to-blue-500", hoverColor: "hover:from-purple-300 hover:via-indigo-300 hover:to-blue-400", size: "medium", tooltip: "Listen to stories with word highlighting and voice reading!", view: 'story-time' },
         { title: "My Rewards", description: "See all your awesome badges and stickers!", emoji: "🏅", color: "bg-gradient-to-br from-amber-400 via-yellow-400 to-orange-500", hoverColor: "hover:from-amber-300 hover:via-yellow-300 hover:to-orange-400", size: "medium", tooltip: "Check out all the cool badges and stickers you've earned!", view: 'child-home' },
@@ -287,9 +289,12 @@ const ModuleSelection: React.FC<{ subject: Subject; onStartModule: (deck: CardDa
                         <h2 className={clsx("text-2xl font-bold mb-2", subject.textColor)}>{module.title}</h2>
                         <p className="text-gray-700">{module.description}</p>
                     </div>
+                    
                     <div className="text-right mt-4 font-bold text-gray-500">Start &rarr;</div>
                 </Card>
+                
             ))}
+            
         </div>
     </div>
 );
