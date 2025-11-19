@@ -599,6 +599,10 @@ const ReadAlongStory: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
     const isSpeakingRef = useRef(false);
 
+    const [simplifiedSentences, setSimplifiedSentences] = useState<string[] | null>(null);
+    const [showSimplified, setShowSimplified] = useState<boolean>(false);
+    const [isSimplifying, setIsSimplifying] = useState<boolean>(false);
+
     useEffect(() => {
         return () => {
             window.speechSynthesis.cancel();
@@ -606,14 +610,56 @@ const ReadAlongStory: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         };
     }, []);
 
-    const speakSentence = (sentenceIndex: number) => {
-        if (!selectedStory || sentenceIndex >= selectedStory.sentences.length) {
-            setIsPlaying(false);
-            isSpeakingRef.current = false;
+    useEffect(() => {
+        if (!selectedStory) {
+            setSimplifiedSentences(null);
+            setShowSimplified(false);
             return;
         }
+      
+        if (simplifiedSentences !== null || isSimplifying) return;
+      
+        const simplifyStory = async () => {
+            setIsSimplifying(true);
+            try {
+                const response = await fetch('/api/simplify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ textToSimplify: selectedStory.text }),
+                });
+          
+                if (!response.ok) {
+                    throw new Error('API request failed');
+                }
+          
+                const data = await response.json();
+                setSimplifiedSentences(data.simplifiedSentences);
+          
+            } catch (error) {
+                console.error('Failed to simplify story:', error);
+                setSimplifiedSentences([]); // Prevent infinite re-fetching on error
+            } finally {
+                setIsSimplifying(false);
+            }
+        };
+      
+        simplifyStory();
+      
+    }, [selectedStory, simplifiedSentences, isSimplifying]); // Dependencies
 
-        const sentence = selectedStory.sentences[sentenceIndex];
+    const speakSentence = (sentenceIndex: number) => {
+        
+        const currentSentences = (showSimplified && simplifiedSentences && simplifiedSentences.length > 0)
+      ? simplifiedSentences
+      : selectedStory?.sentences;
+
+      if (!selectedStory || !currentSentences || sentenceIndex >= currentSentences.length) {
+        setIsPlaying(false);
+        isSpeakingRef.current = false;
+        return;
+    }
+
+        const sentence = currentSentences[sentenceIndex];
         const utterance = new SpeechSynthesisUtterance(sentence);
         const voices = window.speechSynthesis.getVoices();
         const preferredVoice = voices.find(v => v.name.includes('Google IN English') || v.name.includes('Microsoft Heera') || v.name.includes('Heera') || (v.lang.startsWith('en-') && v.name.includes('Female')));
@@ -677,9 +723,14 @@ const ReadAlongStory: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
     const getTotalProgress = () => {
         if (!selectedStory) return 0;
-        let totalWords = selectedStory.sentences.reduce((acc, s) => acc + s.split(/\s+/).length, 0);
+
+        const currentSentences = (showSimplified && simplifiedSentences && simplifiedSentences.length > 0)
+            ? simplifiedSentences
+            : selectedStory.sentences;
+
+        let totalWords = currentSentences.reduce((acc, s) => acc + s.split(/\s+/).length, 0);
         let currentWords = 0;
-        selectedStory.sentences.forEach((sentence, idx) => {
+        currentSentences.forEach((sentence, idx) => {
             const wordCount = sentence.split(/\s+/).length;
             if (idx < currentSentenceIndex) {
                 currentWords += wordCount;
@@ -689,8 +740,32 @@ const ReadAlongStory: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         });
         return totalWords > 0 ? (currentWords / totalWords) * 100 : 0;
     };
+    // --- ADD getCurrentWordCount FUNCTION ---
+    const getCurrentWordCount = () => {
+        if (!selectedStory) return { current: 0, total: 0 };
+
+        const currentSentences = (showSimplified && simplifiedSentences && simplifiedSentences.length > 0)
+            ? simplifiedSentences
+            : selectedStory.sentences;
+            
+        let totalWords = currentSentences.reduce((acc, s) => acc + s.split(/\s+/).length, 0);
+        let currentWords = 0;
+        
+        currentSentences.forEach((sentence, idx) => {
+            const wordCount = sentence.split(/\s+/).length;
+            
+            if (idx < currentSentenceIndex) {
+                currentWords += wordCount;
+            } else if (idx === currentSentenceIndex) {
+                currentWords += currentWordInSentence;
+            }
+        });
+        
+        return { current: currentWords, total: totalWords };
+    };
 
     if (!selectedStory) {
+        
         return (
             <div className="max-w-6xl mx-auto px-4 py-8 animate-in fade-in duration-500">
                 <Button onClick={onClose} className="mb-8 bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2"><ArrowLeft size={16} /> Back to Story Menu</Button>
@@ -708,6 +783,10 @@ const ReadAlongStory: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     }
 
     const progress = getTotalProgress();
+    const wordCount = getCurrentWordCount();
+    const activeSentences = (showSimplified && simplifiedSentences && simplifiedSentences.length > 0)
+        ? simplifiedSentences
+        : selectedStory!.sentences;
 
     return (
         <div className="max-w-5xl mx-auto px-4 py-8 animate-in fade-in duration-500">
@@ -717,7 +796,7 @@ const ReadAlongStory: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 <CardContent className="p-8">
                     <div className="bg-gradient-to-br from-yellow-50 to-orange-50 p-8 rounded-2xl mb-6 min-h-[400px] border-4 border-yellow-200 shadow-inner">
                         <div className="text-3xl leading-relaxed font-semibold text-gray-800 space-y-4">
-                            {selectedStory.sentences.map((sentence, sentenceIdx) => (
+                            {activeSentences.map((sentence, sentenceIdx) => (
                                 <p key={sentenceIdx} className="inline">
                                     {sentence.split(/\s+/).map((word, wordIdx) => (
                                         <span key={`${sentenceIdx}-${wordIdx}`} className={clsx("inline-block transition-all duration-200 px-2 py-1 rounded-lg mx-1", { 'bg-green-400 text-white scale-110 font-bold shadow-lg transform -translate-y-1': sentenceIdx === currentSentenceIndex && wordIdx === currentWordInSentence, 'text-gray-400': sentenceIdx < currentSentenceIndex || (sentenceIdx === currentSentenceIndex && wordIdx < currentWordInSentence) })}>{word}</span>
@@ -735,6 +814,64 @@ const ReadAlongStory: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                          </div>
                          <div className="bg-white p-4 rounded-xl border-2 border-gray-200 shadow-sm"><div className="flex items-center gap-4"><Volume2 size={20} className="text-gray-600" /><div className="flex-1"><p className="text-sm font-semibold text-gray-600 mb-2">Volume</p><Slider value={[isMuted ? 0 : volume]} max={1} step={0.1} onValueChange={(val) => setVolume(val[0])} disabled={isMuted} /></div><span className="text-sm font-bold text-gray-600 w-12 text-right">{Math.round((isMuted ? 0 : volume) * 100)}%</span></div></div>
                          <div className="bg-white p-4 rounded-xl border-2 border-gray-200 shadow-sm"><div className="flex items-center gap-4"><Gauge size={20} className="text-gray-600" /><div className="flex-1"><p className="text-sm font-semibold text-gray-600 mb-2">Reading Speed</p><Slider value={[rate]} min={0.5} max={1.5} step={0.1} onValueChange={(val) => setRate(val[0])} /></div><span className="text-sm font-bold text-gray-600 w-12 text-right">{rate.toFixed(1)}x</span></div></div>
+
+                         {/* <div className="bg-white p-4 rounded-xl border-2 border-gray-200 shadow-sm"><div className="flex items-center gap-4"><Gauge size={20} className="text-gray-600" /><div className="flex-1"><p className="text-sm font-semibold text-gray-600 mb-2">Reading Speed</p><Slider value={[rate]} min={0.5} max={1.5} step={0.1} onValueChange={(val) => setRate(val[0])} /></div><span className="text-sm font-bold text-gray-600 w-12 text-right">{rate.toFixed(1)}x</span></div></div> */}
+                     
+                         {/* --- NEW SECTION: PROGRESS INDICATOR --- */}
+                         <div className="bg-blue-50 p-4 rounded-xl border-2 border-blue-200">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-semibold text-blue-700">Progress</span>
+                                <span className="text-sm font-bold text-blue-700">
+                                  {wordCount.current} / {wordCount.total} words
+                                </span>
+                            </div>
+                            <div className="w-full bg-blue-200 rounded-full h-3 overflow-hidden">
+                                <div
+                                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300"
+                                  style={{ width: `${progress}%` }}
+                                />
+                            </div>
+                         </div>
+                         {/* ----------------------------------------- */}
+
+                         {/* --- NEW SECTION: SIMPLIFY TOGGLE --- */}
+                         <div className="text-center p-2">
+                            {isSimplifying && (
+                                <p className="font-semibold text-gray-600 animate-pulse">
+                                  ✨ Simplifying text for you...
+                                </p>
+                            )}
+                            {simplifiedSentences && simplifiedSentences.length > 0 && !isSimplifying && (
+                                <Button
+                                  onClick={() => {
+                                    handleRestart(); // Stop TTS when toggling
+                                    setShowSimplified(!showSimplified);
+                                  }}
+                                  variant="outline"
+                                  className="border-2 border-purple-500 text-purple-600 font-bold hover:bg-purple-50 hover:text-purple-700"
+                                >
+                                  {showSimplified ? 'Show Original Text' : 'Show Simplified Text'}
+                                </Button>
+                            )}
+                            {simplifiedSentences && simplifiedSentences.length === 0 && !isSimplifying && (
+                                <p className="font-semibold text-red-500">
+                                  ⚠️ Simplification failed. Showing original text.
+                                </p>
+                            )}
+                         </div>
+                         {/* ------------------------------------ */}
+
+                         {/* --- HELPFUL TIPS --- */}
+                         <div className="p-4 bg-gradient-to-r from-green-50 to-teal-50 rounded-xl border-2 border-green-200">
+                            <p className="text-center text-green-700 font-semibold text-lg">
+                                👀 Follow the{' '}
+                                <span className="bg-green-400 text-white px-3 py-1 rounded-lg shadow">
+                                  green highlighted words
+                                </span>{' '}
+                                as the story plays!
+                            </p>
+                         </div>
+                     
                      </div>
                 </CardContent>
             </Card>

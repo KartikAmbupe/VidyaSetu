@@ -101,6 +101,12 @@ export function StoryTime({ onClose }: { onClose: () => void }) {
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const isSpeakingRef = useRef(false);
 
+  const [simplifiedSentences, setSimplifiedSentences] = useState<string[] | null>(null);
+ 
+  const [showSimplified, setShowSimplified] = useState<boolean>(false);
+  
+  const [isSimplifying, setIsSimplifying] = useState<boolean>(false);
+
   // Clean up on unmount
   useEffect(() => {
     return () => {
@@ -109,18 +115,63 @@ export function StoryTime({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
+  useEffect(() => {
+    // Clear old simplified text if we go back to library
+    if (!selectedStory) {
+      setSimplifiedSentences(null);
+      setShowSimplified(false);
+      return;
+    }
+  
+    // If we already have this story's simple text, don't re-fetch
+    // Also, only run this if simplification hasn't been done yet
+    if (simplifiedSentences !== null || isSimplifying) return;
+  
+    const simplifyStory = async () => {
+      setIsSimplifying(true);
+      try {
+        // The Next.js App Router URL is still /api/simplify
+        const response = await fetch('/api/simplify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ textToSimplify: selectedStory.text }),
+        });
+  
+        if (!response.ok) {
+          throw new Error('API request failed');
+        }
+  
+        const data = await response.json();
+        setSimplifiedSentences(data.simplifiedSentences);
+  
+      } catch (error) {
+        console.error('Failed to simplify story:', error);
+        setSimplifiedSentences([]); // Set to empty array to prevent infinite re-fetching on error
+      } finally {
+        setIsSimplifying(false);
+      }
+    };
+  
+    simplifyStory();
+  
+  }, [selectedStory, simplifiedSentences, isSimplifying]); // Dependencies include simplifiedSentences/isSimplifying for proper state check
+
   // Speak story sentence by sentence with word tracking
 // In your story-time.tsx file
 
 // Speak story sentence by sentence with word tracking
 const speakSentence = (sentenceIndex: number) => {
-    if (!selectedStory || sentenceIndex >= selectedStory.sentences.length) {
+  const currentSentences = (showSimplified && simplifiedSentences && simplifiedSentences.length > 0)
+      ? simplifiedSentences
+      : selectedStory?.sentences;
+
+    if (!selectedStory || sentenceIndex >= selectedStory.sentences.length ||!currentSentences || sentenceIndex >= currentSentences.length) {
         setIsPlaying(false);
         isSpeakingRef.current = false;
         return;
     }
 
-    const sentence = selectedStory.sentences[sentenceIndex];
+    const sentence = currentSentences[sentenceIndex];
     const utterance = new SpeechSynthesisUtterance(sentence);
     
     // Get available voices
@@ -212,11 +263,15 @@ const speakSentence = (sentenceIndex: number) => {
   // Calculate total progress
   const getTotalProgress = () => {
     if (!selectedStory) return 0;
+
+    const currentSentences = (showSimplified && simplifiedSentences && simplifiedSentences.length > 0)
+    ? simplifiedSentences
+    : selectedStory.sentences;
     
     let totalWords = 0;
     let currentWords = 0;
     
-    selectedStory.sentences.forEach((sentence, idx) => {
+    currentSentences.forEach((sentence, idx) => {
       const wordCount = sentence.split(/\s+/).length;
       totalWords += wordCount;
       
@@ -232,11 +287,15 @@ const speakSentence = (sentenceIndex: number) => {
 
   const getCurrentWordCount = () => {
     if (!selectedStory) return { current: 0, total: 0 };
+
+    const currentSentences = (showSimplified && simplifiedSentences && simplifiedSentences.length > 0)
+    ? simplifiedSentences
+    : selectedStory.sentences;
     
     let totalWords = 0;
     let currentWords = 0;
     
-    selectedStory.sentences.forEach((sentence, idx) => {
+    currentSentences.forEach((sentence, idx) => {
       const wordCount = sentence.split(/\s+/).length;
       totalWords += wordCount;
       
@@ -301,6 +360,10 @@ const speakSentence = (sentenceIndex: number) => {
   const wordCount = getCurrentWordCount();
   const progress = getTotalProgress();
 
+  const activeSentences: string[] = (showSimplified && simplifiedSentences && simplifiedSentences.length > 0)
+    ? simplifiedSentences
+    : selectedStory!.sentences; // Use '!' since selectedStory is guaranteed here
+
   // Story Reader View
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 animate-in fade-in duration-500">
@@ -327,7 +390,7 @@ const speakSentence = (sentenceIndex: number) => {
           {/* Story Text Display with Word Highlighting */}
           <div className="bg-gradient-to-br from-yellow-50 to-orange-50 p-8 rounded-2xl mb-6 min-h-[400px] border-4 border-yellow-200 shadow-inner">
             <div className="text-3xl leading-relaxed font-semibold text-gray-800 space-y-4">
-              {selectedStory.sentences.map((sentence, sentenceIdx) => {
+              {activeSentences.map((sentence, sentenceIdx) => {
                 const words = sentence.split(/\s+/);
                 const isSentenceActive = sentenceIdx === currentSentenceIndex;
                 const isSentencePast = sentenceIdx < currentSentenceIndex;
@@ -455,7 +518,34 @@ const speakSentence = (sentenceIndex: number) => {
               </div>
             </div>
 
+            <div className="text-center p-2">
+              {isSimplifying && (
+                <p className="font-semibold text-gray-600 animate-pulse">
+                  ✨ Simplifying text for you...
+                </p>
+              )}
+              {simplifiedSentences && simplifiedSentences.length > 0 && !isSimplifying && (
+                <Button
+                  onClick={() => {
+                    // Stop TTS when toggling modes
+                    handleRestart();
+                    setShowSimplified(!showSimplified);
+                  }}
+                  variant="outline"
+                  className="border-2 border-purple-500 text-purple-600 font-bold hover:bg-purple-50 hover:text-purple-700"
+                >
+                  {showSimplified ? 'Show Original Text' : 'Show Simplified Text'}
+                </Button>
+              )}
+              {simplifiedSentences && simplifiedSentences.length === 0 && !isSimplifying && (
+                <p className="font-semibold text-red-500">
+                  ⚠️ Simplification failed. Showing original text.
+                </p>
+              )}
+            </div>
+
             {/* Helpful Tips */}
+            <div className="p-4 bg-gradient-to-r from-green-50 to-teal-50 rounded-xl border-2 border-green-200"></div>
             <div className="p-4 bg-gradient-to-r from-green-50 to-teal-50 rounded-xl border-2 border-green-200">
               <p className="text-center text-green-700 font-semibold text-lg">
                 👀 Follow the{' '}
