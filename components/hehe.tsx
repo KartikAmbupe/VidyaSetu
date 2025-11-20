@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAudioCompanion } from "@/hooks/useAudioCompanion";
 import { Slider } from "@/components/ui/slider";
-import FontToggle  from "./font-toggle";
+import FontToggle  from "./child-dashboard/font-toggle";
 
 // --- TYPE DEFINITIONS ---
 type View = 'child-home' | 'module-selection' | 'module' | 'game-selection' | 'english-game' | 'maths-game' | 'story-time' | 'interactive-story' | 'read-along-story';
