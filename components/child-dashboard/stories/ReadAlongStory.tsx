@@ -78,7 +78,7 @@ export const ReadAlongStory: React.FC<ReadAlongStoryProps> = ({ onClose }) => {
                 isSpeakingRef.current = false;
                 return;
             }
-            
+
         const sentence = currentSentences[sentenceIndex];
         const utterance = new SpeechSynthesisUtterance(sentence);
         const voices = window.speechSynthesis.getVoices();
@@ -188,7 +188,7 @@ export const ReadAlongStory: React.FC<ReadAlongStoryProps> = ({ onClose }) => {
                 <CardContent className="p-8">
                     <div className="bg-gradient-to-br from-yellow-50 to-orange-50 p-8 rounded-2xl mb-6 min-h-[400px] border-4 border-yellow-200 shadow-inner">
                         <div className="text-3xl leading-relaxed font-semibold text-gray-800 space-y-4">
-                            {selectedStory.sentences.map((sentence, sentenceIdx) => (
+                            {activeSentences.map((sentence, sentenceIdx) => (
                                 <p key={sentenceIdx} className="inline">
                                     {sentence.split(/\s+/).map((word, wordIdx) => (
                                         <span key={`${sentenceIdx}-${wordIdx}`} className={clsx("inline-block transition-all duration-200 px-2 py-1 rounded-lg mx-1", { 'bg-green-400 text-white scale-110 font-bold shadow-lg transform -translate-y-1': sentenceIdx === currentSentenceIndex && wordIdx === currentWordInSentence, 'text-gray-400': sentenceIdx < currentSentenceIndex || (sentenceIdx === currentSentenceIndex && wordIdx < currentWordInSentence) })}>{word}</span>
