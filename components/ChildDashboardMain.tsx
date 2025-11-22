@@ -13,6 +13,7 @@ import { MathsGame } from "./child-dashboard/games/MathsGame";
 import { ReadAlongStory } from "./child-dashboard/stories/ReadAlongStory";
 import { InteractiveStory } from "./child-dashboard/stories/InteractiveStory";
 import { SubjectSelection, ModuleSelection, GameSelection, StoryTimeSelection } from "./child-dashboard/SelectionView";
+import AdaptiveLearningSuite from './child-dashboard/quiz/AdaptiveLearningSuite';
 
 export default function ChildDashboard() {
     const [currentView, setCurrentView] = useState<View>('child-home');
@@ -75,7 +76,10 @@ export default function ChildDashboard() {
         if (view === 'module-selection') playAudio(["Great choice! It's time to learn something new.", "What would you like to learn today?"]);
         if (view === 'game-selection') playAudio("Let's play a game!");
         if (view === 'story-time') playAudio("Awesome, let's have an adventure!");
+        if (view === 'quiz-suite') playAudio("Time for a challenge! Let's check your learning!"); 
         triggerExitAndNavigate(view);
+        
+        
     };
 
     const handleBack = () => {
@@ -83,6 +87,7 @@ export default function ChildDashboard() {
         setIsExiting(true);
         setTimeout(() => {
             if (currentView === 'module-selection' && selectedSubjectKey) setSelectedSubjectKey(null);
+            else if (currentView === 'quiz-suite') setCurrentView('child-home');
             else if (currentView === 'module') setCurrentView('module-selection');
             else if (currentView === 'interactive-story' || currentView === 'read-along-story') setCurrentView('story-time');
             else setCurrentView('child-home');
@@ -126,6 +131,7 @@ export default function ChildDashboard() {
             case 'story-time': return <StoryTimeSelection onNavigate={handleNavigate} onBack={handleBack} />;
             case 'interactive-story': return <InteractiveStory onBack={handleBack} playAudio={playAudio} />;
             case 'read-along-story': return <ReadAlongStory onClose={handleBack} />;
+            case 'quiz-suite': return <AdaptiveLearningSuite onExit={handleBack} />;
             default: return <DashboardHome onNavigate={handleNavigate} />;
         }
     };
