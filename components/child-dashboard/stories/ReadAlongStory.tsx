@@ -1,4 +1,6 @@
 // components/child-dashboard/stories/ReadAlongStory.tsx
+'use client'
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Volume2, VolumeX, Play, Pause, RotateCcw, Gauge } from "lucide-react";
 import { clsx } from 'clsx';
@@ -23,15 +25,61 @@ export const ReadAlongStory: React.FC<ReadAlongStoryProps> = ({ onClose }) => {
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
     const isSpeakingRef = useRef(false);
 
+    const [simplifiedSentences, setSimplifiedSentences] = useState<string[] | null>(null);
+    const [showSimplified, setShowSimplified] = useState<boolean>(false);
+    const [isSimplifying, setIsSimplifying] = useState<boolean>(false);
+
     useEffect(() => { return () => { window.speechSynthesis.cancel(); isSpeakingRef.current = false; }; }, []);
 
-    const speakSentence = (sentenceIndex: number) => {
-        if (!selectedStory || sentenceIndex >= selectedStory.sentences.length) {
-            setIsPlaying(false);
-            isSpeakingRef.current = false;
+    useEffect(() => {
+        if (!selectedStory) {
+            setSimplifiedSentences(null);
+            setShowSimplified(false);
             return;
         }
-        const sentence = selectedStory.sentences[sentenceIndex];
+      
+        if (simplifiedSentences !== null || isSimplifying) return;
+      
+        const simplifyStory = async () => {
+            setIsSimplifying(true);
+            try {
+                const response = await fetch('/api/simplify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ textToSimplify: selectedStory.text }),
+                });
+          
+                if (!response.ok) {
+                    throw new Error('API request failed');
+                }
+          
+                const data = await response.json();
+                setSimplifiedSentences(data.simplifiedSentences);
+          
+            } catch (error) {
+                console.error('Failed to simplify story:', error);
+                setSimplifiedSentences([]); // Set to empty array on error
+            } finally {
+                setIsSimplifying(false);
+            }
+        };
+      
+        simplifyStory();
+      
+    }, [selectedStory, simplifiedSentences, isSimplifying]);
+
+    const speakSentence = (sentenceIndex: number) => {
+        const currentSentences = (showSimplified && simplifiedSentences && simplifiedSentences.length > 0)
+            ? simplifiedSentences
+            : selectedStory?.sentences;
+
+            if (!selectedStory || sentenceIndex >= selectedStory.sentences.length ||!currentSentences || sentenceIndex >= currentSentences.length) {
+                setIsPlaying(false);
+                isSpeakingRef.current = false;
+                return;
+            }
+            
+        const sentence = currentSentences[sentenceIndex];
         const utterance = new SpeechSynthesisUtterance(sentence);
         const voices = window.speechSynthesis.getVoices();
         const preferredVoice = voices.find(v => v.name.includes('Google IN English') || v.name.includes('Microsoft Heera') || v.name.includes('Heera') || (v.lang.startsWith('en-') && v.name.includes('Female')));
@@ -76,6 +124,36 @@ export const ReadAlongStory: React.FC<ReadAlongStoryProps> = ({ onClose }) => {
         isSpeakingRef.current = false;
     };
 
+    const getCurrentWordCount = () => {
+        if (!selectedStory) return { current: 0, total: 0 };
+
+        // Ensure calculations use the active sentence list
+        const currentSentences = (showSimplified && simplifiedSentences && simplifiedSentences.length > 0)
+            ? simplifiedSentences
+            : selectedStory.sentences;
+            
+        let totalWords = currentSentences.reduce((acc, s) => acc + s.split(/\s+/).length, 0);
+        let currentWords = 0;
+        
+        currentSentences.forEach((sentence, idx) => {
+            const wordCount = sentence.split(/\s+/).length;
+            
+            if (idx < currentSentenceIndex) {
+                currentWords += wordCount;
+            } else if (idx === currentSentenceIndex) {
+                currentWords += currentWordInSentence;
+            }
+        });
+        
+        return { current: currentWords, total: totalWords };
+    };
+
+    const getTotalProgress = () => {
+        const { current, total } = getCurrentWordCount();
+        return total > 0 ? (current / total) * 100 : 0;
+    };
+    
+    
     if (!selectedStory) {
         return (
             <div className="max-w-6xl mx-auto px-4 py-8 animate-in fade-in duration-500">
@@ -93,6 +171,14 @@ export const ReadAlongStory: React.FC<ReadAlongStoryProps> = ({ onClose }) => {
             </div>
         );
     }
+
+    const progress = getTotalProgress();
+    const wordCount = getCurrentWordCount();
+    const activeSentences = (showSimplified && simplifiedSentences && simplifiedSentences.length > 0)
+        ? simplifiedSentences
+        : selectedStory.sentences;
+
+        
 
     return (
         <div className="max-w-5xl mx-auto px-4 py-8 animate-in fade-in duration-500">
@@ -118,8 +204,62 @@ export const ReadAlongStory: React.FC<ReadAlongStoryProps> = ({ onClose }) => {
                             <Button onClick={handlePlayPause} size="lg" className="rounded-full w-24 h-24 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-2xl transform hover:scale-105 transition-transform">{isPlaying ? <Pause size={40} /> : <Play size={40} className="ml-1" />}</Button>
                             <Button onClick={() => setIsMuted(!isMuted)} variant="outline" size="lg" className="rounded-full w-16 h-16 border-2 hover:bg-gray-100">{isMuted ? <VolumeX size={28} /> : <Volume2 size={28} />}</Button>
                         </div>
-                        <div className="bg-white p-4 rounded-xl border-2 border-gray-200 shadow-sm"><div className="flex items-center gap-4"><Volume2 size={20} className="text-gray-600" /><div className="flex-1"><p className="text-sm font-semibold text-gray-600 mb-2">Volume</p><Slider value={[isMuted ? 0 : volume]} max={1} step={0.1} onValueChange={(val) => setVolume(val[0])} disabled={isMuted} /></div><span className="text-sm font-bold text-gray-600 w-12 text-right">{Math.round((isMuted ? 0 : volume) * 100)}%</span></div></div>
+                        <div className="bg-white p-4 rounded-xl border-2 border-gray-200 shadow-sm"><div className="flex items-center gap-4"><Volume2 size={20} className="text-gray-600" /><div className="flex-1"><p className="text-sm font-semibold text-gray-600 mb-2">Volume</p><Slider value={[isMuted ? 0 : volume]} max={1} step={0.1} onValueChange={(val) => setVolume(val[0])} disabled={isMuted} /></div><span className="text-sm font-bold text-gray-600 w-12 text-right">{Math.round((isMuted ? 0 : volume) * 100)}%</span>
+                        </div>
+                        </div>
                         <div className="bg-white p-4 rounded-xl border-2 border-gray-200 shadow-sm"><div className="flex items-center gap-4"><Gauge size={20} className="text-gray-600" /><div className="flex-1"><p className="text-sm font-semibold text-gray-600 mb-2">Reading Speed</p><Slider value={[rate]} min={0.5} max={1.5} step={0.1} onValueChange={(val) => setRate(val[0])} /></div><span className="text-sm font-bold text-gray-600 w-12 text-right">{rate.toFixed(1)}x</span></div></div>
+
+                        {/* ---  PROGRESS INDICATOR JSX --- */}
+                        <div className="bg-blue-50 p-4 rounded-xl border-2 border-blue-200">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-semibold text-blue-700">Progress</span>
+                                <span className="text-sm font-bold text-blue-700">
+                                  {wordCount.current} / {wordCount.total} words
+                                </span>
+                            </div>
+                            <div className="w-full bg-blue-200 rounded-full h-3 overflow-hidden">
+                                <div
+                                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300"
+                                  style={{ width: `${progress}%` }}
+                                />
+                            </div>
+                         </div>
+
+                         {/* ---  SIMPLIFY TOGGLE BUTTON JSX --- */}
+                         <div className="text-center p-2">
+                            {isSimplifying && (
+                                <p className="font-semibold text-gray-600 animate-pulse">
+                                  ✨ Simplifying text for you...
+                                </p>
+                            )}
+                            {simplifiedSentences && simplifiedSentences.length > 0 && !isSimplifying && (
+                                <Button
+                                  onClick={() => {
+                                    handleRestart(); // Stop TTS when toggling
+                                    setShowSimplified(!showSimplified);
+                                  }}
+                                  variant="outline"
+                                  className="border-2 border-purple-500 text-purple-600 font-bold hover:bg-purple-50 hover:text-purple-700"
+                                >
+                                  {showSimplified ? 'Show Original Text' : 'Show Simplified Text'}
+                                </Button>
+                            )}
+                            {simplifiedSentences && simplifiedSentences.length === 0 && !isSimplifying && (
+                                <p className="font-semibold text-red-500">
+                                  ⚠️ Simplification failed. Showing original text.
+                                </p>
+                            )}
+                         </div>
+
+                         <div className="p-4 bg-gradient-to-r from-green-50 to-teal-50 rounded-xl border-2 border-green-200">
+                            <p className="text-center text-green-700 font-semibold text-lg">
+                                👀 Follow the{' '}
+                                <span className="bg-green-400 text-white px-3 py-1 rounded-lg shadow">
+                                  green highlighted words
+                                </span>{' '}
+                                as the story plays!
+                            </p>
+                         </div>
                     </div>
                 </CardContent>
             </Card>
