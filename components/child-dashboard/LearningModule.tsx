@@ -18,6 +18,7 @@ export const LearningModule: React.FC<LearningModuleProps> = ({ deck, onClose })
     const [startTime, setStartTime] = useState(Date.now());
     
     const card = deck[currentIndex];
+    const isLastCard = currentIndex === deck.length - 1;
 
     useEffect(() => {
         const loadVoices = () => { setVoices(window.speechSynthesis.getVoices()); };
@@ -41,6 +42,7 @@ export const LearningModule: React.FC<LearningModuleProps> = ({ deck, onClose })
         }
         speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
+        // Try to find an Indian English voice, or Google US English, or fallback to the first available
         const preferredVoice = voices.find(v => v.name === 'Microsoft Heera - English (India)') || voices.find(v => v.lang === 'en-IN') || voices.find(v => v.name.includes('Google') && v.lang.startsWith('en-'));
         utterance.voice = preferredVoice || voices[0];
         utterance.lang = 'en-US';
@@ -71,9 +73,27 @@ export const LearningModule: React.FC<LearningModuleProps> = ({ deck, onClose })
                         </div>
                     </div>
                     <div className="flex items-center justify-between">
-                        <Button onClick={() => setCurrentIndex(i => i - 1)} disabled={currentIndex === 0} className="bg-gray-200 text-gray-700 hover:bg-gray-300">Prev</Button>
+                        <Button 
+                            onClick={() => setCurrentIndex(i => i - 1)} 
+                            disabled={currentIndex === 0} 
+                            className="bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50"
+                        >
+                            Prev
+                        </Button>
+                        
                         <p className="text-gray-500 font-semibold">{currentIndex + 1} / {deck.length}</p>
-                        <Button onClick={() => setCurrentIndex(i => i + 1)} disabled={currentIndex === deck.length - 1} className="bg-gray-200 text-gray-700 hover:bg-gray-300">Next</Button>
+                        
+                        <Button 
+                            onClick={isLastCard ? handleClose : () => setCurrentIndex(i => i + 1)} 
+                            className={clsx(
+                                "transition-colors duration-200",
+                                isLastCard 
+                                    ? "bg-green-500 text-white hover:bg-green-600 shadow-md" 
+                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                            )}
+                        >
+                            {isLastCard ? "Finish" : "Next"}
+                        </Button>
                     </div>
                 </div>
             </Card>
