@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState } from "react";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -6,18 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Settings } from "lucide-react";
 
+// Keep these
 import { OverviewStats } from "./parent-dashboard/OverviewStats";
 import { AIInsights } from "./parent-dashboard/AIInsights"; 
 import { ChildProfile, AchievementList, GoalSetter } from "./parent-dashboard/SidebarContent";
 import { SessionChart } from "./parent-dashboard/charts/SessionChart";
-import { FocusChart } from "./parent-dashboard/charts/FocusChart";
-import { TopicChart } from "./parent-dashboard/charts/TopicChart";
+
+// NEW IMPORT
+import { ActivityLog } from "./parent-dashboard/ActivityLog"; 
+
+// REMOVED: FocusChart, TopicChart
 
 import { 
     childrenData, 
     sessionData, 
-    focusData, 
-    topicsData, 
+    // REMOVED: focusData, topicsData 
     progressMetrics, 
     aiSuggestions, 
     recentAchievements 
@@ -34,7 +37,7 @@ export default function ParentDashboard() {
     <TooltipProvider>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
         
-        {/* HEADER (Merged directly here so it scrolls) */}
+        {/* HEADER */}
         <header className="bg-white shadow-sm border-b-2 border-blue-200">
             <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -70,8 +73,10 @@ export default function ParentDashboard() {
             {/* Main Content Column */}
             <div className="lg:col-span-2 space-y-8">
               <SessionChart data={sessionData} timeRange={timeRange} setTimeRange={setTimeRange} />
-              <FocusChart data={focusData} />
-              <TopicChart data={topicsData} />
+              
+              {/* NEW: Activity Log (Replaced Focus/Topic Charts) */}
+              <ActivityLog />
+
               <AIInsights suggestions={aiSuggestions} />
             </div>
 
