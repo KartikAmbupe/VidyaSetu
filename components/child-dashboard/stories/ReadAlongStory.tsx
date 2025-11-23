@@ -12,9 +12,11 @@ import { stories } from "../data";
 
 interface ReadAlongStoryProps {
     onClose: () => void;
+    onStoryStart?: () => void;
+    onStoryEnd?: () => void;
 }
 
-export const ReadAlongStory: React.FC<ReadAlongStoryProps> = ({ onClose }) => {
+export const ReadAlongStory: React.FC<ReadAlongStoryProps> = ({ onClose, onStoryStart, onStoryEnd }) => {
     const [selectedStory, setSelectedStory] = useState<Story | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
@@ -161,7 +163,11 @@ export const ReadAlongStory: React.FC<ReadAlongStoryProps> = ({ onClose }) => {
                 <div className="text-center mb-12"><h1 className="text-5xl font-black text-gray-800 mb-4">📖 Read-Along Stories</h1><p className="text-2xl text-gray-600 font-semibold">Choose a story and follow along as the words light up!</p></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {stories.map((story) => (
-                        <Card key={story.id} onClick={() => setSelectedStory(story)} className="cursor-pointer hover:scale-105 transition-transform duration-300 border-4 border-purple-200 hover:border-purple-400 overflow-hidden shadow-xl">
+                        <Card key={story.id} onClick={() => {
+                            setSelectedStory(story);
+                            // Start parent timer when a specific story is selected
+                            if (onStoryStart) onStoryStart();
+                        }} className="cursor-pointer hover:scale-105 transition-transform duration-300 border-4 border-purple-200 hover:border-purple-400 overflow-hidden shadow-xl">
                             <img src={story.coverImage} alt={story.title} className="w-full h-64 object-cover" />
                             <CardContent className="p-6 bg-gradient-to-br from-purple-50 to-pink-50"><h3 className="text-2xl font-bold text-purple-700 mb-2">{story.title}</h3><p className="text-gray-600 font-medium">by {story.author}</p></CardContent>
                             <div className="h-1 w-full bg-gray-100"><div className="h-full bg-green-500" style={{ width: '0%' }}></div></div>
@@ -182,7 +188,12 @@ export const ReadAlongStory: React.FC<ReadAlongStoryProps> = ({ onClose }) => {
 
     return (
         <div className="max-w-5xl mx-auto px-4 py-8 animate-in fade-in duration-500">
-            <Button onClick={() => { window.speechSynthesis.cancel(); setSelectedStory(null); }} className="mb-6 bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2"><ArrowLeft size={16} /> Back to Library</Button>
+            <Button onClick={() => { 
+                window.speechSynthesis.cancel(); 
+                setSelectedStory(null);
+                // Stop parent timer when leaving story
+                if (onStoryEnd) onStoryEnd();
+            }} className="mb-6 bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2"><ArrowLeft size={16} /> Back to Library</Button>
             <Card className="border-4 border-purple-300 shadow-2xl overflow-hidden">
                 <div className="bg-gradient-to-r from-purple-400 via-pink-400 to-purple-500 p-6 text-white"><h2 className="text-4xl font-black mb-2">{selectedStory.title}</h2><p className="text-xl opacity-90">by {selectedStory.author}</p></div>
                 <CardContent className="p-8">

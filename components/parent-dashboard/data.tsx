@@ -3,8 +3,7 @@ import { Play, Clock, Target } from "lucide-react";
 import { Child, SessionDataPoint, FocusDataPoint, TopicDataPoint, ProgressMetrics, AISuggestion, Achievement } from "./types";
 
 export const childrenData: Child[] = [
-  { id: "alex", name: "Alex", age: 7, avatar: "👦", grade: "Grade 2" },
-  { id: "emma", name: "Emma", age: 6, avatar: "👧", grade: "Grade 1" },
+  { id: "654c6014e760c41d117462fa", name: "Sam", age: 7, avatar: "👦", grade: "Grade 2" },
 ];
 
 export const sessionData: SessionDataPoint[] = [

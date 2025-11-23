@@ -260,7 +260,7 @@ const QTableDisplay: React.FC<QTableProps> = ({ qTable, currentDiff, lastAction,
 // 5. MAIN LOGIC HOOK
 // ----------------------------------------------------------------------
 
-const useAdaptiveTutor = (subject: 'MATH' | 'ENGLISH') => {
+const useAdaptiveTutor = (subject: 'MATH' | 'ENGLISH', onQuizStart?: () => void, onQuizEnd?: () => void) => {
   const [gamePhase, setGamePhase] = useState<'WELCOME' | 'QUIZ' | 'FEEDBACK'>('WELCOME');
   const [difficulty, setDifficulty] = useState<Difficulty>('EASY');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -277,6 +277,8 @@ const useAdaptiveTutor = (subject: 'MATH' | 'ENGLISH') => {
     setScore(0);
     setCurrentQIndex(0);
     setGamePhase('QUIZ');
+    // Notify parent that quiz has started
+    if (onQuizStart) onQuizStart();
   };
 
   const handleAnswer = (selectedOption: string | number) => {
@@ -337,6 +339,8 @@ const useAdaptiveTutor = (subject: 'MATH' | 'ENGLISH') => {
     setTimeout(() => {
       setDifficulty(nextDiff);
       setGamePhase('FEEDBACK');
+      // Notify parent that quiz round has ended (but quiz suite is still active)
+      // We'll only call onQuizEnd when user exits the quiz suite entirely
     }, 500);
   };
 
@@ -359,8 +363,8 @@ const useAdaptiveTutor = (subject: 'MATH' | 'ENGLISH') => {
 // 6. COMPONENT: MATH ADVENTURE
 // ----------------------------------------------------------------------
 
-const MathAdventure: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-  const tutor = useAdaptiveTutor('MATH');
+const MathAdventure: React.FC<{ onBack: () => void; onQuizStart?: () => void; onQuizEnd?: () => void }> = ({ onBack, onQuizStart, onQuizEnd }) => {
+  const tutor = useAdaptiveTutor('MATH', onQuizStart, onQuizEnd);
 
   const getDifficultyColor = (d: Difficulty) => {
     if (d === 'EASY') return 'bg-green-500';
@@ -455,8 +459,8 @@ const MathAdventure: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 // 7. COMPONENT: ENGLISH FUN
 // ----------------------------------------------------------------------
 
-const EnglishFun: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-  const tutor = useAdaptiveTutor('ENGLISH');
+const EnglishFun: React.FC<{ onBack: () => void; onQuizStart?: () => void; onQuizEnd?: () => void }> = ({ onBack, onQuizStart, onQuizEnd }) => {
+  const tutor = useAdaptiveTutor('ENGLISH', onQuizStart, onQuizEnd);
 
   const getDifficultyColor = (d: Difficulty) => {
     if (d === 'EASY') return 'bg-green-500';
@@ -552,16 +556,21 @@ const EnglishFun: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 // ----------------------------------------------------------------------
 interface SuiteProps {
     onExit: () => void;
+    onQuizStart?: () => void;
+    onQuizEnd?: () => void;
 }
 
-export default function AdaptiveLearningSuite({ onExit }: SuiteProps) {
+export default function AdaptiveLearningSuite({ onExit, onQuizStart, onQuizEnd }: SuiteProps) {
   const [selectedSubject, setSelectedSubject] = useState<'MATH' | 'ENGLISH' | null>(null);
 
   // Force full screen height to prevent double scrollbars on body
   if (selectedSubject === 'MATH') {
     return (
       <div className="h-screen w-full overflow-hidden">
-        <MathAdventure onBack={() => setSelectedSubject(null)} />
+        <MathAdventure onBack={() => {
+          setSelectedSubject(null);
+          if (onQuizEnd) onQuizEnd();
+        }} onQuizStart={onQuizStart} onQuizEnd={onQuizEnd} />
       </div>
     );
   }
@@ -569,7 +578,10 @@ export default function AdaptiveLearningSuite({ onExit }: SuiteProps) {
   if (selectedSubject === 'ENGLISH') {
     return (
       <div className="h-screen w-full overflow-hidden">
-        <EnglishFun onBack={() => setSelectedSubject(null)} />
+        <EnglishFun onBack={() => {
+          setSelectedSubject(null);
+          if (onQuizEnd) onQuizEnd();
+        }} onQuizStart={onQuizStart} onQuizEnd={onQuizEnd} />
       </div>
     );
   }
@@ -579,7 +591,10 @@ export default function AdaptiveLearningSuite({ onExit }: SuiteProps) {
       <div className="max-w-4xl w-full text-center relative">
         <div className="absolute top-0 left-0">
             <button 
-              onClick={onExit} 
+              onClick={() => {
+                if (onQuizEnd) onQuizEnd();
+                onExit();
+              }} 
               className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-md hover:bg-gray-100 text-slate-600 font-bold border border-slate-200"
             >
                <ArrowLeft className="w-4 h-4" />

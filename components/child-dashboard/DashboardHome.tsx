@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import FontToggle from "./font-toggle";
 import { View } from "./types";
 
-export const DashboardHome: React.FC<{ onNavigate: (view: View) => void }> = ({ onNavigate }) => {
+export const DashboardHome: React.FC<{ onNavigate: (view: View) => void; parentTimeRemaining: number }> = ({ onNavigate, parentTimeRemaining }) => {
     const [xpCount, setXpCount] = useState(1250);
     const [selectedMood, setSelectedMood] = useState<string | null>(null);
     const [clickedButton, setClickedButton] = useState<string | null>(null);
@@ -58,6 +58,21 @@ export const DashboardHome: React.FC<{ onNavigate: (view: View) => void }> = ({ 
                                 <Dialog><DialogTrigger asChild><Button variant="outline" className="w-full justify-start text-lg py-5"> <Settings className="mr-3" /> Settings </Button></DialogTrigger><DialogContent><DialogHeader> <DialogTitle>Settings</DialogTitle> </DialogHeader><div className="p-4 space-y-4"> <p>Accessibility Options:</p> <FontToggle /> </div></DialogContent></Dialog>
                                 <Button variant="outline" className="w-full justify-start text-lg py-5"> <HelpCircle className="mr-3" /> Help </Button>
                                 <Button variant="outline" className="w-full justify-start text-lg py-5 text-red-600 hover:bg-red-50 hover:text-red-700"> <LogOut className="mr-3" /> Logout </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-2 border-green-200 shadow-xl">
+                        <CardContent className="p-6">
+                            <h3 className="text-2xl font-black text-gray-800 mb-4 flex items-center">
+                                <span className="mr-2">⏱️</span>
+                                Learning Time
+                            </h3>
+                            <div className="text-center p-4 bg-gradient-to-br from-green-50 to-teal-50 rounded-lg border-2 border-green-300">
+                                <p className="text-sm font-semibold text-gray-600 mb-2">Time Remaining</p>
+                                <p className="text-3xl font-black text-green-700">
+                                    {Math.floor(parentTimeRemaining / 60)}:{(parentTimeRemaining % 60).toString().padStart(2, '0')}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-2">Timer runs during learning activities</p>
                             </div>
                         </CardContent>
                     </Card>

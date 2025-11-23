@@ -23,12 +23,21 @@ export default function ChildDashboard() {
 
     const CURRENT_CHILD_ID = "654c6014e760c41d117462fa"; 
 
-    const PLAY_TIME_SECONDS = 300; 
-    const COOLDOWN_SECONDS = 1800; 
+    // Game timer: 5 minutes play, 30 minutes cooldown
+    const GAME_PLAY_TIME_SECONDS = 300; 
+    const GAME_COOLDOWN_SECONDS = 1800; 
 
-    const [gameTimeRemaining, setGameTimeRemaining] = useState(PLAY_TIME_SECONDS);
+    // Parent timer: for learning activities (quiz, learning module, stories)
+    const [parentTimeRemaining, setParentTimeRemaining] = useState(0); // in seconds
+    const [isParentTimerRunning, setIsParentTimerRunning] = useState(false);
+    
+    // Game timer: separate timer for gaming modules
+    const [gameTimeRemaining, setGameTimeRemaining] = useState(GAME_PLAY_TIME_SECONDS);
     const [isGameTimerRunning, setIsGameTimerRunning] = useState(false);
     const [playtimeCooldownEnd, setPlaytimeCooldownEnd] = useState<number | null>(null);
+    
+    // Track active learning activity
+    const [isLearningActivityActive, setIsLearningActivityActive] = useState(false);
     
     const [tourStep, setTourStep] = useState(0);
     const [isExiting, setIsExiting] = useState(false);
@@ -37,6 +46,7 @@ export default function ChildDashboard() {
     const cooldownTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const tourIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const parentTimerRef = useRef<number>(0); // Track current timer value
 
     const { playAudio, isReady } = useAudioCompanion();
     const hasWelcomed = useRef(false);
@@ -53,7 +63,7 @@ export default function ChildDashboard() {
         }
     }, [isReady, playAudio]);
 
-        // Function to send Heartbeat to the server
+        // Function to send Heartbeat to the server (for parent timer)
         const sendHeartbeat = async () => {
             try {
                 await fetch("/api/settings/heartbeat", {
@@ -67,8 +77,8 @@ export default function ChildDashboard() {
         };
 
         useEffect(() => {
-            if (isGameTimerRunning && !playtimeCooldownEnd) {
-                // Start heartbeat timer
+            if (isParentTimerRunning && isLearningActivityActive && !playtimeCooldownEnd) {
+                // Start heartbeat timer only when parent timer is running and learning activity is active
                 heartbeatIntervalRef.current = setInterval(() => {
                     sendHeartbeat();
                 }, 60000); // Send heartbeat every 60 seconds (1 minute)
@@ -82,47 +92,66 @@ export default function ChildDashboard() {
             return () => { 
                 if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current); 
             };
-        }, [isGameTimerRunning, playtimeCooldownEnd]);
+        }, [isParentTimerRunning, isLearningActivityActive, playtimeCooldownEnd]);
     
 
     useEffect(() => {
-        async function checkTimeAndStartSession() {
+        async function checkTimeAndInitialize() {
             try {
-                // 1. Check time limit
+                // 1. Check time limit (for parent timer)
                 const checkRes = await fetch(`/api/settings/check-time?childId=${CURRENT_CHILD_ID}`);
                 const checkData = await checkRes.json();
 
                 if (checkData.status === "LOCKED") {
-                    setCurrentView("locked-screen"); // Navigate to the new view
-                    setPlaytimeCooldownEnd(checkData.until); // Use server cooldown time
-                    setIsGameTimerRunning(false); 
+                    setCurrentView("locked-screen");
+                    setPlaytimeCooldownEnd(checkData.until);
+                    setIsParentTimerRunning(false);
+                    setIsGameTimerRunning(false);
                     return;
                 }
 
-                // 2. If OK, set the remaining time and start the session on the server
+                // 2. If OK, set the remaining time for parent timer (but don't start it yet)
                 const minutesLeft = checkData.minutesLeft;
-                setGameTimeRemaining(minutesLeft * 60);
+                const timeInSeconds = minutesLeft * 60;
+                setParentTimeRemaining(timeInSeconds);
+                parentTimerRef.current = timeInSeconds; // Sync ref
+                // Don't start parent timer automatically - it will start when learning activity begins
 
-                const startRes = await fetch("/api/settings/start-session", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ childId: CURRENT_CHILD_ID }),
-                });
-
-                if (startRes.ok) {
-                    setIsGameTimerRunning(true); // Start the local timer
-                } else {
-                    console.error("Failed to start session on server.");
-                    setIsGameTimerRunning(false);
-                }
+                // 3. Initialize game timer separately (5 minutes)
+                setGameTimeRemaining(GAME_PLAY_TIME_SECONDS);
             } catch (error) {
-                console.error("Failed to check time or start session:", error);
+                console.error("Failed to check time:", error);
             }
         }
 
-        checkTimeAndStartSession();
+        checkTimeAndInitialize();
     }, []); // Runs only on mount
 
+    // Parent timer: only ticks when learning activity is active
+    useEffect(() => {
+        if (isParentTimerRunning && isLearningActivityActive) {
+            const parentTimerInterval = setInterval(() => {
+                setParentTimeRemaining(prev => {
+                    const newTime = prev <= 1 ? 0 : prev - 1;
+                    parentTimerRef.current = newTime; // Keep ref in sync
+                    return newTime;
+                });
+            }, 1000);
+            
+            return () => clearInterval(parentTimerInterval);
+        }
+    }, [isParentTimerRunning, isLearningActivityActive]);
+
+    // Check if parent timer reached zero
+    useEffect(() => {
+        if (isParentTimerRunning && parentTimeRemaining === 0) {
+            setIsParentTimerRunning(false);
+            setIsLearningActivityActive(false);
+            triggerExitAndNavigate('locked-screen');
+        }
+    }, [parentTimeRemaining, isParentTimerRunning]);
+
+    // Game timer: ticks when game is running
     useEffect(() => {
         if (isGameTimerRunning) {
             gameTimerIntervalRef.current = setInterval(() => { 
@@ -143,8 +172,11 @@ export default function ChildDashboard() {
 
     useEffect(() => {
         if (isGameTimerRunning && gameTimeRemaining === 0) {
-            setIsGameTimerRunning(false); 
-            triggerExitAndNavigate('locked-screen'); 
+            setIsGameTimerRunning(false);
+            // Set 30 minute cooldown for games
+            setPlaytimeCooldownEnd(Date.now() + GAME_COOLDOWN_SECONDS * 1000);
+            // Navigate back to game selection (which will show cooldown)
+            triggerExitAndNavigate('game-selection');
         }
     }, [gameTimeRemaining, isGameTimerRunning]);
 
@@ -152,11 +184,11 @@ export default function ChildDashboard() {
         if (playtimeCooldownEnd) { 
             cooldownTimerIntervalRef.current = setInterval(() => { 
                 if (Date.now() >= playtimeCooldownEnd) { 
-                    setPlaytimeCooldownEnd(null); 
-                    window.location.reload(); 
+                    setPlaytimeCooldownEnd(null);
+                    // Reset game timer when cooldown ends
+                    setGameTimeRemaining(GAME_PLAY_TIME_SECONDS);
                     if (cooldownTimerIntervalRef.current) clearInterval(cooldownTimerIntervalRef.current); 
                 }
-                // Removed the "else setPlaytimeCooldownEnd(p=>p)" causing the update depth error
             }, 1000); 
         } 
         return () => { 
@@ -194,19 +226,23 @@ export default function ChildDashboard() {
 
     const checkTimeRemainingAndNavigate = async (targetView: View) => {
         try {
-            // Check server time immediately
+            // Check server time immediately (for parent timer)
             const checkRes = await fetch(`/api/settings/check-time?childId=${CURRENT_CHILD_ID}`);
             const checkData = await checkRes.json();
     
             if (checkData.status === "LOCKED") {
                 // If locked, immediately show the lock screen
                 setPlaytimeCooldownEnd(checkData.until);
+                setIsParentTimerRunning(false);
                 setIsGameTimerRunning(false);
+                setIsLearningActivityActive(false);
                 triggerExitAndNavigate('locked-screen');
             } else {
-                // If not locked, update the local timer and navigate to the target view
+                // If not locked, update the parent timer and navigate to the target view
                 const minutesLeft = checkData.minutesLeft;
-                setGameTimeRemaining(minutesLeft * 60);
+                const timeInSeconds = minutesLeft * 60;
+                setParentTimeRemaining(timeInSeconds);
+                parentTimerRef.current = timeInSeconds;
                 triggerExitAndNavigate(targetView);
             }
         } catch (error) {
@@ -221,14 +257,39 @@ export default function ChildDashboard() {
         if (view === 'module-selection') playAudio(["Great choice! It's time to learn something new.", "What would you like to learn today?"]);
         if (view === 'game-selection') playAudio("Let's play a game!");
         if (view === 'story-time') playAudio("Awesome, let's have an adventure!");
-        if (view === 'quiz-suite') playAudio("Time for a challenge! Let's check your learning!"); 
+        if (view === 'quiz-suite') {
+            playAudio("Time for a challenge! Let's check your learning!");
+            // Start parent timer when entering quiz suite
+            setIsLearningActivityActive(true);
+            setIsParentTimerRunning(true);
+            fetch("/api/settings/start-session", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ childId: CURRENT_CHILD_ID }),
+            }).catch(err => console.error("Failed to start session:", err));
+        }
+        if (view === 'interactive-story') {
+            // Start parent timer immediately for interactive stories
+            setIsLearningActivityActive(true);
+            setIsParentTimerRunning(true);
+            fetch("/api/settings/start-session", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ childId: CURRENT_CHILD_ID }),
+            }).catch(err => console.error("Failed to start session:", err));
+        }
         triggerExitAndNavigate(view);
-        
-        
     };
 
     const handleBack = () => {
         if (typeof window.speechSynthesis !== 'undefined') speechSynthesis.cancel();
+        
+        // Stop parent timer when leaving learning activities
+        if (currentView === 'quiz-suite' || currentView === 'interactive-story' || currentView === 'read-along-story') {
+            setIsLearningActivityActive(false);
+            setIsParentTimerRunning(false);
+        }
+        
         setIsExiting(true);
         setTimeout(() => {
             if (currentView === 'module-selection' && selectedSubjectKey) setSelectedSubjectKey(null);
@@ -241,6 +302,16 @@ export default function ChildDashboard() {
     };
 
     const handleStartModule = (deck: CardData[]) => {
+        // Start parent timer when learning module starts
+        setIsLearningActivityActive(true);
+        setIsParentTimerRunning(true);
+        // Start session on server
+        fetch("/api/settings/start-session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ childId: CURRENT_CHILD_ID }),
+        }).catch(err => console.error("Failed to start session:", err));
+        
         triggerExitAndNavigate('module', () => setCurrentDeck(deck));
     };
 
@@ -267,18 +338,60 @@ export default function ChildDashboard() {
         }
     };
 
-    const handleCloseModule = (totalCardsViewed: number, durationSeconds: number) => {
+    const handleCloseModule = async (totalCardsViewed: number, durationSeconds: number) => {
         if (typeof window.speechSynthesis !== 'undefined') speechSynthesis.cancel();
         
-        // Log the activity. We use totalCardsViewed as the 'score' for reporting.
-        logActivity('Learning Module', totalCardsViewed, durationSeconds); 
+        // Stop parent timer when leaving learning module
+        setIsLearningActivityActive(false);
+        setIsParentTimerRunning(false);
         
-        checkTimeRemainingAndNavigate('module-selection')
+        // Log the activity. We use totalCardsViewed as the 'score' for reporting.
+        await logActivity('Learning Module', totalCardsViewed, durationSeconds);
+        
+        // Calculate new time by subtracting the time spent from current timer value
+        // Use the ref to get the most current value
+        const currentTime = parentTimerRef.current;
+        const newTime = Math.max(0, currentTime - durationSeconds);
+        
+        // Update both state and ref
+        setParentTimeRemaining(newTime);
+        parentTimerRef.current = newTime;
+        
+        // Check if timer reached zero
+        if (newTime <= 0) {
+            // Timer reached zero, check server for lock status
+            try {
+                const checkRes = await fetch(`/api/settings/check-time?childId=${CURRENT_CHILD_ID}`);
+                const checkData = await checkRes.json();
+                
+                if (checkData.status === "LOCKED") {
+                    setPlaytimeCooldownEnd(checkData.until);
+                    setIsParentTimerRunning(false);
+                    setIsLearningActivityActive(false);
+                    triggerExitAndNavigate('locked-screen');
+                } else {
+                    // Update with server value (should be 0 or very close)
+                    const minutesLeft = checkData.minutesLeft;
+                    const timeInSeconds = minutesLeft * 60;
+                    setParentTimeRemaining(timeInSeconds);
+                    parentTimerRef.current = timeInSeconds;
+                    triggerExitAndNavigate('module-selection');
+                }
+            } catch (err) {
+                console.error("Failed time check:", err);
+                triggerExitAndNavigate('module-selection');
+            }
+        } else {
+            // Timer still has time, navigate normally without checking server
+            // This prevents the timer from being reset incorrectly
+            triggerExitAndNavigate('module-selection');
+        }
     };
 
     const handleStartGame = (game: 'english-game' | 'maths-game') => {
         if (playtimeCooldownEnd || gameTimeRemaining <= 0) return;
-        // if (!isGameTimerRunning) setIsGameTimerRunning(true);
+        // Start game timer when game starts
+        setIsGameTimerRunning(true);
         triggerExitAndNavigate(game);
     };
 
@@ -287,6 +400,9 @@ export default function ChildDashboard() {
     const handleCloseGame = (finalScore: number,gameDurationSeconds: number) => {
         if (typeof window.speechSynthesis !== 'undefined') speechSynthesis.cancel();
         
+        // Stop game timer when leaving game
+        setIsGameTimerRunning(false);
+        
         logActivity(currentView === 'english-game' ? 'English Game' : 'Math Game', finalScore, gameDurationSeconds); 
 
         checkTimeRemainingAndNavigate('game-selection')
@@ -294,7 +410,7 @@ export default function ChildDashboard() {
 
     const renderView = () => {
         switch (currentView) {
-            case 'child-home': return <DashboardHome onNavigate={handleNavigate} />;
+            case 'child-home': return <DashboardHome onNavigate={handleNavigate} parentTimeRemaining={parentTimeRemaining} />;
             case 'module-selection':
                 return selectedSubjectKey 
                     ? <ModuleSelection subject={subjectsData[selectedSubjectKey]} onStartModule={handleStartModule} onBack={handleBack} />
@@ -305,10 +421,35 @@ export default function ChildDashboard() {
             case 'maths-game': return <MathsGame onClose={handleCloseGame} />;
             case 'story-time': return <StoryTimeSelection onNavigate={handleNavigate} onBack={handleBack} />;
             case 'interactive-story': return <InteractiveStory onBack={handleBack} playAudio={playAudio} />;
-            case 'read-along-story': return <ReadAlongStory onClose={handleBack} />;
-            case 'quiz-suite': return <AdaptiveLearningSuite onExit={handleBack} />;
+            case 'read-along-story': {
+                const handleStoryStart = () => {
+                    setIsLearningActivityActive(true);
+                    setIsParentTimerRunning(true);
+                    fetch("/api/settings/start-session", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ childId: CURRENT_CHILD_ID }),
+                    }).catch(err => console.error("Failed to start session:", err));
+                };
+                const handleStoryEnd = () => {
+                    setIsLearningActivityActive(false);
+                    setIsParentTimerRunning(false);
+                };
+                return <ReadAlongStory onClose={handleBack} onStoryStart={handleStoryStart} onStoryEnd={handleStoryEnd} />;
+            }
+            case 'quiz-suite': {
+                const handleQuizStart = () => {
+                    setIsLearningActivityActive(true);
+                    setIsParentTimerRunning(true);
+                };
+                const handleQuizEnd = () => {
+                    setIsLearningActivityActive(false);
+                    setIsParentTimerRunning(false);
+                };
+                return <AdaptiveLearningSuite onExit={handleBack} onQuizStart={handleQuizStart} onQuizEnd={handleQuizEnd} />;
+            }
             case 'locked-screen': return <LockScreen playtimeCooldownEnd={playtimeCooldownEnd} />
-            default: return <DashboardHome onNavigate={handleNavigate} />;
+            default: return <DashboardHome onNavigate={handleNavigate} parentTimeRemaining={parentTimeRemaining} />;
         }
     };
 
