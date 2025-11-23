@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Child, Achievement } from "./types";
+import React from "react";
 
 export const ChildProfile = ({ child }: { child: Child }) => (
   <Card className="shadow-lg border-2 border-purple-200">
@@ -38,16 +39,91 @@ export const AchievementList = ({ achievements }: { achievements: Achievement[] 
   </Card>
 );
 
-export const GoalSetter = ({ goal, setGoal }: { goal: number[], setGoal: (val: number[]) => void }) => (
-  <Card className="shadow-lg border-2 border-green-200">
-    <CardHeader><CardTitle className="flex items-center space-x-2"><Sliders className="h-5 w-5 text-green-500" /><span>Set Time Goal</span></CardTitle></CardHeader>
-    <CardContent className="space-y-6">
-      <div>
-        <div className="flex justify-between items-center mb-3"><span className="text-sm font-bold">Daily Time Goal</span><span className="text-lg font-bold text-green-600">{goal[0]} min</span></div>
-        <Slider value={goal} onValueChange={setGoal} max={60} min={15} step={5} className="w-full" />
-        <div className="flex justify-between text-xs text-gray-500 mt-1"><span>15 min</span><span>60 min</span></div>
-      </div>
-      <Button className="w-full bg-gradient-to-r from-green-500 to-blue-600 text-white font-bold">Set Timing</Button>
-    </CardContent>
-  </Card>
-);
+// export const GoalSetter = ({ goal, setGoal }: { goal: number[], setGoal: (val: number[]) => void }) => (
+//   <Card className="shadow-lg border-2 border-green-200">
+//     <CardHeader><CardTitle className="flex items-center space-x-2"><Sliders className="h-5 w-5 text-green-500" /><span>Set Time Goal</span></CardTitle></CardHeader>
+//     <CardContent className="space-y-6">
+//       <div>
+//         <div className="flex justify-between items-center mb-3"><span className="text-sm font-bold">Daily Time Goal</span><span className="text-lg font-bold text-green-600">{goal[0]} min</span></div>
+//         <Slider value={goal} onValueChange={setGoal} max={60} min={15} step={5} className="w-full" />
+//         <div className="flex justify-between text-xs text-gray-500 mt-1"><span>15 min</span><span>60 min</span></div>
+//       </div>
+//       <Button className="w-full bg-gradient-to-r from-green-500 to-blue-600 text-white font-bold">Set Timing</Button>
+//     </CardContent>
+//   </Card>
+// );
+export const GoalSetter = ({
+  goal,
+  setGoal,
+}: {
+  goal: number[];
+  setGoal: (val: number[]) => void;
+}) => {
+  // Optional: loading state for button feedback
+  const [saving, setSaving] = React.useState(false);
+
+  async function updateTimeLimit() {
+    setSaving(true);
+
+    try {
+      await fetch("/api/parent/update-time", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          childId: "654c6014e760c41d117462fa", // Sam's ID from your seed script
+          dailyTimeLimit: goal[0],             // slider value
+        }),
+      });
+
+      alert("Daily time limit updated!");
+    } catch (err) {
+      alert("Error updating time limit.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card className="shadow-lg border-2 border-green-200">
+      <CardHeader>
+        <CardTitle className="flex items-center space-x-2">
+          <Sliders className="h-5 w-5 text-green-500" />
+          <span>Set Time Goal</span>
+        </CardTitle>
+      </CardHeader>
+
+      <CardContent className="space-y-6">
+        <div>
+          <div className="flex justify-between items-center mb-3">
+            <span className="text-sm font-bold">Daily Time Goal</span>
+            <span className="text-lg font-bold text-green-600">
+              {goal[0]} min
+            </span>
+          </div>
+
+          <Slider
+            value={goal}
+            onValueChange={setGoal}
+            max={60}
+            min={15}
+            step={5}
+            className="w-full"
+          />
+
+          <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <span>15 min</span>
+            <span>60 min</span>
+          </div>
+        </div>
+
+        <Button
+          className="w-full bg-gradient-to-r from-green-500 to-blue-600 text-white font-bold"
+          onClick={updateTimeLimit}
+          disabled={saving}
+        >
+          {saving ? "Saving..." : "Set Timing"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
