@@ -9,7 +9,8 @@ import {
   Calculator, 
   BookOpen, 
   Play, 
-  ArrowLeft 
+  ArrowLeft,
+  RefreshCw
 } from 'lucide-react';
 
 // ----------------------------------------------------------------------
@@ -40,7 +41,7 @@ export type QTable = Record<string, number[]>;
 // ----------------------------------------------------------------------
 
 const ALPHA = 0.5;   
-const EPSILON = 0.2; 
+const EPSILON = 0.1; // Reduced Epsilon to make it less random once it learns
 const DIFFICULTIES: Difficulty[] = ['EASY', 'MEDIUM', 'HARD'];
 const PERFORMANCES: Performance[] = ['LOW', 'MID', 'HIGH'];
 const ACTIONS: Action[] = ['DECREASE', 'STAY', 'INCREASE'];
@@ -55,13 +56,40 @@ const INITIAL_Q_TABLE = (): QTable => {
   return initial;
 };
 
-const GET_REWARD = (difficultyIdx: number, performanceIdx: number): number => {
-  if (difficultyIdx === 2 && performanceIdx === 2) return 20;
-  if (difficultyIdx === 2 && performanceIdx === 1) return 10;
-  if (difficultyIdx === 1 && performanceIdx === 2) return 10;
-  if (performanceIdx === 0) return -10;
-  if (difficultyIdx === 0 && performanceIdx === 2) return -5;
-  return 5;
+/**
+ * FIXED REWARD FUNCTION
+ * Now evaluates the specific ACTION taken given the context.
+ */
+const GET_REWARD = (difficultyIdx: number, performanceIdx: number, actionIdx: number): number => {
+  // actionIdx: 0 = DECREASE, 1 = STAY, 2 = INCREASE
+  
+  // CASE 1: High Performance (Student is acing it)
+  if (performanceIdx === 2) { 
+    if (difficultyIdx === 2) {
+      // Already at HARD + High Score = Optimal State (Flow)
+      return actionIdx === 1 ? 20 : -5; // STAY is best, don't change
+    }
+    // At EASY or MEDIUM + High Score -> Should INCREASE
+    if (actionIdx === 2) return 15; // Reward for increasing
+    if (actionIdx === 1) return -5; // Penalty for staying (Boredom)
+    return -20; // Heavy penalty for decreasing
+  }
+
+  // CASE 2: Low Performance (Student is struggling)
+  if (performanceIdx === 0) {
+    if (difficultyIdx === 0) {
+      // Already at EASY + Low Score -> Support needed
+      return actionIdx === 1 ? 5 : -5; // STAY is acceptable
+    }
+    // At MEDIUM or HARD + Low Score -> Should DECREASE
+    if (actionIdx === 0) return 15; // Reward for decreasing (Mercy)
+    return -15; // Penalty for staying or increasing (Frustration)
+  }
+
+  // CASE 3: Mid Performance (Student is challenged but coping)
+  // Ideal action is usually to STAY
+  if (actionIdx === 1) return 10;
+  return -5; // Changing difficulty might disrupt flow
 };
 
 // ----------------------------------------------------------------------
@@ -202,7 +230,6 @@ const QTableDisplay: React.FC<QTableProps> = ({ qTable, currentDiff, lastAction,
         PERFORMANCES.map((p) => {
           const stateKey = `${d}-${p}`;
           const isCurrentContext = currentDiff === d; 
-          // Use regex to replace text-color with ring-color for dynamic styling
           const ringColor = themeColor.replace('text-', 'ring-');
           const activeClass = isCurrentContext ? `bg-slate-800 ring-1 ${ringColor}/30` : '';
 
@@ -273,13 +300,11 @@ const useAdaptiveTutor = (subject: 'MATH' | 'ENGLISH') => {
 
     const currentStateKey = `${difficulty}-${performance}`;
     const currentDiffIndex = DIFFICULTIES.indexOf(difficulty);
-    const reward = GET_REWARD(currentDiffIndex, perfIndex);
-    
-    setLastReward(reward);
 
+    // 1. DECIDE ACTION (Epsilon-Greedy)
     let actionIndex: number;
     if (Math.random() < EPSILON) {
-      actionIndex = Math.floor(Math.random() * 3); 
+      actionIndex = Math.floor(Math.random() * 3); // Explore
     } else {
       const currentQValues = qTable[currentStateKey];
       const maxVal = Math.max(...currentQValues);
@@ -288,6 +313,12 @@ const useAdaptiveTutor = (subject: 'MATH' | 'ENGLISH') => {
     }
     setLastAction(actionIndex);
 
+    // 2. CALCULATE REWARD (Crucial Fix: Pass actionIndex to reward function)
+    // Now the agent gets specific feedback on its choice
+    const reward = GET_REWARD(currentDiffIndex, perfIndex, actionIndex);
+    setLastReward(reward);
+
+    // 3. UPDATE Q-TABLE
     setQTable((prev) => {
       const newTable = { ...prev };
       const currentQ = newTable[currentStateKey][actionIndex];
@@ -295,6 +326,7 @@ const useAdaptiveTutor = (subject: 'MATH' | 'ENGLISH') => {
       return newTable;
     });
 
+    // 4. EXECUTE ACTION
     let nextDiffIndex = currentDiffIndex;
     if (ACTIONS[actionIndex] === 'DECREASE') nextDiffIndex = Math.max(0, currentDiffIndex - 1);
     if (ACTIONS[actionIndex] === 'INCREASE') nextDiffIndex = Math.min(2, currentDiffIndex + 1);
@@ -368,6 +400,9 @@ const MathAdventure: React.FC<{ onBack: () => void }> = ({ onBack }) => {
              <span className="font-bold text-slate-700 hidden md:block">Math Adventure</span>
              <div className={`px-3 py-1 rounded-full text-xs font-bold text-white ${getDifficultyColor(tutor.difficulty)}`}>{tutor.difficulty}</div>
           </div>
+          <button onClick={() => tutor.setGamePhase('WELCOME')} className="text-xs text-slate-400 hover:text-blue-600 font-bold uppercase tracking-wide flex items-center gap-1">
+            <RefreshCw className="w-3 h-3" /> Reset
+          </button>
         </header>
 
         <main className="flex-1 overflow-y-auto">
@@ -461,6 +496,9 @@ const EnglishFun: React.FC<{ onBack: () => void }> = ({ onBack }) => {
              <span className="font-bold text-slate-700 hidden md:block">English Fun</span>
              <div className={`px-3 py-1 rounded-full text-xs font-bold text-white ${getDifficultyColor(tutor.difficulty)}`}>{tutor.difficulty}</div>
           </div>
+          <button onClick={() => tutor.setGamePhase('WELCOME')} className="text-xs text-slate-400 hover:text-pink-600 font-bold uppercase tracking-wide flex items-center gap-1">
+            <RefreshCw className="w-3 h-3" /> Reset
+          </button>
         </header>
 
         <main className="flex-1 overflow-y-auto">
@@ -514,7 +552,7 @@ const EnglishFun: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 // ----------------------------------------------------------------------
 interface SuiteProps {
     onExit: () => void;
-  }
+}
 
 export default function AdaptiveLearningSuite({ onExit }: SuiteProps) {
   const [selectedSubject, setSelectedSubject] = useState<'MATH' | 'ENGLISH' | null>(null);
@@ -538,17 +576,18 @@ export default function AdaptiveLearningSuite({ onExit }: SuiteProps) {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans flex flex-col items-center justify-center p-6 overflow-y-auto">
-      <div className="max-w-4xl w-full text-center">
-      <div className="absolute top-4 left-4">
+      <div className="max-w-4xl w-full text-center relative">
+        <div className="absolute top-0 left-0">
             <button 
               onClick={onExit} 
-              className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-md hover:bg-gray-100 text-slate-600 font-bold"
+              className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-md hover:bg-gray-100 text-slate-600 font-bold border border-slate-200"
             >
-               {/* You might need to import ArrowLeft from lucide-react */}
-               ← Back to Dashboard
+               <ArrowLeft className="w-4 h-4" />
+               Back to Dashboard
             </button>
         </div>
-        <div className="mb-12">
+
+        <div className="mt-16 mb-12">
           <div className="w-24 h-24 bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl">
             <Brain className="w-12 h-12 text-teal-400" />
           </div>
