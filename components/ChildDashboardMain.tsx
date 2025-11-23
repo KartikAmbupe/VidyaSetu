@@ -14,14 +14,18 @@ import { ReadAlongStory } from "./child-dashboard/stories/ReadAlongStory";
 import { InteractiveStory } from "./child-dashboard/stories/InteractiveStory";
 import { SubjectSelection, ModuleSelection, GameSelection, StoryTimeSelection } from "./child-dashboard/SelectionView";
 import AdaptiveLearningSuite from './child-dashboard/quiz/AdaptiveLearningSuite';
+import { LockScreen } from './child-dashboard/Lockscreen';
 
 export default function ChildDashboard() {
     const [currentView, setCurrentView] = useState<View>('child-home');
     const [currentDeck, setCurrentDeck] = useState<CardData[]>([]);
     const [selectedSubjectKey, setSelectedSubjectKey] = useState<keyof SubjectsData | null>(null);
 
+    const CURRENT_CHILD_ID = "654c6014e760c41d117462fa"; 
+
     const PLAY_TIME_SECONDS = 300; 
     const COOLDOWN_SECONDS = 1800; 
+
     const [gameTimeRemaining, setGameTimeRemaining] = useState(PLAY_TIME_SECONDS);
     const [isGameTimerRunning, setIsGameTimerRunning] = useState(false);
     const [playtimeCooldownEnd, setPlaytimeCooldownEnd] = useState<number | null>(null);
@@ -32,6 +36,7 @@ export default function ChildDashboard() {
     const gameTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const cooldownTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const tourIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     const { playAudio, isReady } = useAudioCompanion();
     const hasWelcomed = useRef(false);
@@ -48,8 +53,123 @@ export default function ChildDashboard() {
         }
     }, [isReady, playAudio]);
 
-    useEffect(() => { if (isGameTimerRunning && gameTimeRemaining > 0) { gameTimerIntervalRef.current = setInterval(() => { setGameTimeRemaining(prev => prev - 1); }, 1000); } else if (gameTimeRemaining <= 0) { if (gameTimerIntervalRef.current) clearInterval(gameTimerIntervalRef.current); setIsGameTimerRunning(false); setPlaytimeCooldownEnd(Date.now() + COOLDOWN_SECONDS * 1000); setCurrentView('game-selection'); } return () => { if (gameTimerIntervalRef.current) clearInterval(gameTimerIntervalRef.current); }; }, [isGameTimerRunning, gameTimeRemaining]);
-    useEffect(() => { if (playtimeCooldownEnd) { cooldownTimerIntervalRef.current = setInterval(() => { if (Date.now() >= playtimeCooldownEnd) { setPlaytimeCooldownEnd(null); setGameTimeRemaining(PLAY_TIME_SECONDS); if (cooldownTimerIntervalRef.current) clearInterval(cooldownTimerIntervalRef.current); } else { setPlaytimeCooldownEnd(p => p); } }, 1000); } return () => { if (cooldownTimerIntervalRef.current) clearInterval(cooldownTimerIntervalRef.current); }; }, [playtimeCooldownEnd]);
+        // Function to send Heartbeat to the server
+        const sendHeartbeat = async () => {
+            try {
+                await fetch("/api/settings/heartbeat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ childId: CURRENT_CHILD_ID }),
+                });
+            } catch (error) {
+                console.error("Heartbeat failed:", error);
+            }
+        };
+
+        useEffect(() => {
+            if (isGameTimerRunning && !playtimeCooldownEnd) {
+                // Start heartbeat timer
+                heartbeatIntervalRef.current = setInterval(() => {
+                    sendHeartbeat();
+                }, 60000); // Send heartbeat every 60 seconds (1 minute)
+    
+            } else if (heartbeatIntervalRef.current) {
+                // Stop heartbeat if timer is not running or app is locked
+                clearInterval(heartbeatIntervalRef.current);
+                heartbeatIntervalRef.current = null;
+            }
+    
+            return () => { 
+                if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current); 
+            };
+        }, [isGameTimerRunning, playtimeCooldownEnd]);
+    
+
+    useEffect(() => {
+        async function checkTimeAndStartSession() {
+            try {
+                // 1. Check time limit
+                const checkRes = await fetch(`/api/settings/check-time?childId=${CURRENT_CHILD_ID}`);
+                const checkData = await checkRes.json();
+
+                if (checkData.status === "LOCKED") {
+                    setCurrentView("locked-screen"); // Navigate to the new view
+                    setPlaytimeCooldownEnd(checkData.until); // Use server cooldown time
+                    setIsGameTimerRunning(false); 
+                    return;
+                }
+
+                // 2. If OK, set the remaining time and start the session on the server
+                const minutesLeft = checkData.minutesLeft;
+                setGameTimeRemaining(minutesLeft * 60);
+
+                const startRes = await fetch("/api/settings/start-session", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ childId: CURRENT_CHILD_ID }),
+                });
+
+                if (startRes.ok) {
+                    setIsGameTimerRunning(true); // Start the local timer
+                } else {
+                    console.error("Failed to start session on server.");
+                    setIsGameTimerRunning(false);
+                }
+            } catch (error) {
+                console.error("Failed to check time or start session:", error);
+            }
+        }
+
+        checkTimeAndStartSession();
+    }, []); // Runs only on mount
+
+    useEffect(() => {
+        if (isGameTimerRunning) {
+            gameTimerIntervalRef.current = setInterval(() => { 
+                setGameTimeRemaining(prev => {
+                    if (prev <= 1) {
+                        return 0;
+                    }
+                    return prev - 1;
+                }); 
+            }, 1000);
+        }
+        
+        return () => { 
+            if (gameTimerIntervalRef.current) clearInterval(gameTimerIntervalRef.current); 
+        };
+    }, [isGameTimerRunning]);
+    
+
+    useEffect(() => {
+        if (isGameTimerRunning && gameTimeRemaining === 0) {
+            setIsGameTimerRunning(false); 
+            triggerExitAndNavigate('locked-screen'); 
+        }
+    }, [gameTimeRemaining, isGameTimerRunning]);
+
+    useEffect(() => { 
+        if (playtimeCooldownEnd) { 
+            cooldownTimerIntervalRef.current = setInterval(() => { 
+                if (Date.now() >= playtimeCooldownEnd) { 
+                    setPlaytimeCooldownEnd(null); 
+                    window.location.reload(); 
+                    if (cooldownTimerIntervalRef.current) clearInterval(cooldownTimerIntervalRef.current); 
+                }
+                // Removed the "else setPlaytimeCooldownEnd(p=>p)" causing the update depth error
+            }, 1000); 
+        } 
+        return () => { 
+            if (cooldownTimerIntervalRef.current) clearInterval(cooldownTimerIntervalRef.current); 
+        }; 
+    }, [playtimeCooldownEnd]);
+
+    
+
+    // useEffect(() => { if (isGameTimerRunning && gameTimeRemaining > 0) { gameTimerIntervalRef.current = setInterval(() => { setGameTimeRemaining(prev => prev - 1); }, 1000); } else if (gameTimeRemaining <= 0) { if (gameTimerIntervalRef.current) clearInterval(gameTimerIntervalRef.current); setIsGameTimerRunning(false); setPlaytimeCooldownEnd(Date.now() + COOLDOWN_SECONDS * 1000); setCurrentView('game-selection'); } return () => { if (gameTimerIntervalRef.current) clearInterval(gameTimerIntervalRef.current); }; }, [isGameTimerRunning, gameTimeRemaining]);
+    // useEffect(() => { if (playtimeCooldownEnd) { cooldownTimerIntervalRef.current = setInterval(() => { if (Date.now() >= playtimeCooldownEnd) { setPlaytimeCooldownEnd(null); setGameTimeRemaining(PLAY_TIME_SECONDS); if (cooldownTimerIntervalRef.current) clearInterval(cooldownTimerIntervalRef.current); } else { setPlaytimeCooldownEnd(p => p); } }, 1000); } return () => { if (cooldownTimerIntervalRef.current) clearInterval(cooldownTimerIntervalRef.current); }; }, [playtimeCooldownEnd]);
+
+    
 
     useEffect(() => {
         if (currentView === 'module-selection') {
@@ -71,6 +191,31 @@ export default function ChildDashboard() {
             if (callback) callback();
         }, 800);
     };
+
+    const checkTimeRemainingAndNavigate = async (targetView: View) => {
+        try {
+            // Check server time immediately
+            const checkRes = await fetch(`/api/settings/check-time?childId=${CURRENT_CHILD_ID}`);
+            const checkData = await checkRes.json();
+    
+            if (checkData.status === "LOCKED") {
+                // If locked, immediately show the lock screen
+                setPlaytimeCooldownEnd(checkData.until);
+                setIsGameTimerRunning(false);
+                triggerExitAndNavigate('locked-screen');
+            } else {
+                // If not locked, update the local timer and navigate to the target view
+                const minutesLeft = checkData.minutesLeft;
+                setGameTimeRemaining(minutesLeft * 60);
+                triggerExitAndNavigate(targetView);
+            }
+        } catch (error) {
+            console.error("Failed time check during navigation:", error);
+            // Fallback: still navigate back even if check failed
+            triggerExitAndNavigate(targetView);
+        }
+    };
+
 
     const handleNavigate = (view: View) => {
         if (view === 'module-selection') playAudio(["Great choice! It's time to learn something new.", "What would you like to learn today?"]);
@@ -105,16 +250,46 @@ export default function ChildDashboard() {
         else if (key === 'maths') playAudio("Math Adventures, let's go!");
     };
 
+    const logActivity = async (type: string, score: number, durationSeconds: number) => {
+        try {
+            await fetch("/api/activity/log", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    childId: CURRENT_CHILD_ID,
+                    activityType: type,
+                    score: score,
+                    timeSpent: durationSeconds, // Stored in seconds
+                }),
+            });
+        } catch (error) {
+            console.error("Failed to log activity:", error);
+        }
+    };
+
+    const handleCloseModule = (totalCardsViewed: number, durationSeconds: number) => {
+        if (typeof window.speechSynthesis !== 'undefined') speechSynthesis.cancel();
+        
+        // Log the activity. We use totalCardsViewed as the 'score' for reporting.
+        logActivity('Learning Module', totalCardsViewed, durationSeconds); 
+        
+        checkTimeRemainingAndNavigate('module-selection')
+    };
+
     const handleStartGame = (game: 'english-game' | 'maths-game') => {
         if (playtimeCooldownEnd || gameTimeRemaining <= 0) return;
-        if (!isGameTimerRunning) setIsGameTimerRunning(true);
+        // if (!isGameTimerRunning) setIsGameTimerRunning(true);
         triggerExitAndNavigate(game);
     };
 
-    const handleCloseGame = () => {
+    
+
+    const handleCloseGame = (finalScore: number,gameDurationSeconds: number) => {
         if (typeof window.speechSynthesis !== 'undefined') speechSynthesis.cancel();
-        setIsGameTimerRunning(false);
-        triggerExitAndNavigate('game-selection');
+        
+        logActivity(currentView === 'english-game' ? 'English Game' : 'Math Game', finalScore, gameDurationSeconds); 
+
+        checkTimeRemainingAndNavigate('game-selection')
     };
 
     const renderView = () => {
@@ -124,7 +299,7 @@ export default function ChildDashboard() {
                 return selectedSubjectKey 
                     ? <ModuleSelection subject={subjectsData[selectedSubjectKey]} onStartModule={handleStartModule} onBack={handleBack} />
                     : <SubjectSelection onSelectSubject={handleSubjectSelect} onBack={handleBack} />;
-            case 'module': return <LearningModule deck={currentDeck} onClose={handleBack} />;
+            case 'module': return <LearningModule deck={currentDeck} onClose={handleCloseModule} />;
             case 'game-selection': return <GameSelection onStartGame={handleStartGame} onBack={handleBack} gameTimeRemaining={gameTimeRemaining} playtimeCooldownEnd={playtimeCooldownEnd} />;
             case 'english-game': return <EnglishGame onClose={handleCloseGame} playAudio={playAudio} />;
             case 'maths-game': return <MathsGame onClose={handleCloseGame} />;
@@ -132,6 +307,7 @@ export default function ChildDashboard() {
             case 'interactive-story': return <InteractiveStory onBack={handleBack} playAudio={playAudio} />;
             case 'read-along-story': return <ReadAlongStory onClose={handleBack} />;
             case 'quiz-suite': return <AdaptiveLearningSuite onExit={handleBack} />;
+            case 'locked-screen': return <LockScreen playtimeCooldownEnd={playtimeCooldownEnd} />
             default: return <DashboardHome onNavigate={handleNavigate} />;
         }
     };

@@ -8,13 +8,14 @@ import { CardData } from "./types";
 
 interface LearningModuleProps {
     deck: CardData[];
-    onClose: () => void;
+    onClose: (totalCardsViewed: number, durationSeconds: number) => void;
 }
 
 export const LearningModule: React.FC<LearningModuleProps> = ({ deck, onClose }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [useSimpleText, setUseSimpleText] = useState(false);
     const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+    const [startTime, setStartTime] = useState(Date.now());
     
     const card = deck[currentIndex];
 
@@ -24,6 +25,7 @@ export const LearningModule: React.FC<LearningModuleProps> = ({ deck, onClose })
             window.speechSynthesis.onvoiceschanged = loadVoices;
             loadVoices();
         }
+        setStartTime(Date.now());
         return () => {
             if (typeof window.speechSynthesis !== 'undefined') {
                 window.speechSynthesis.onvoiceschanged = null;
@@ -45,12 +47,19 @@ export const LearningModule: React.FC<LearningModuleProps> = ({ deck, onClose })
         speechSynthesis.speak(utterance);
     };
 
+    const handleClose = () => {
+        const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
+        // The number of cards viewed is the current index + 1
+        const totalCardsViewed = currentIndex + 1;
+        onClose(totalCardsViewed, durationSeconds);
+    };
+
     const textToDisplay = useSimpleText ? card.simpleText : card.text;
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in">
             <Card className="relative w-full max-w-2xl p-8 flex flex-col md:flex-row items-center gap-8 border-gray-200">
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-3xl">&times;</button>
+                <button onClick={handleClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-3xl">&times;</button>
                 <div className="flex-1 text-center md:text-left w-full">
                     <img src={card.image} alt="Learning Image" className="w-full h-48 object-contain rounded-xl mb-4 bg-gray-50 p-2 border" />
                     <p className={clsx("font-bold text-gray-800 mb-4 h-20 flex items-center justify-center md:justify-start", useSimpleText ? 'text-2xl' : 'text-5xl')}>{textToDisplay}</p>

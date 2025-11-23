@@ -1,13 +1,15 @@
 // components/child-dashboard/games/EnglishGame.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EnglishQuestion } from "../types";
 import { quizEndMessages } from "../data";
 
 interface EnglishGameProps {
-    onClose: () => void;
-    playAudio: (text: string) => void;
+    // onClose: () => void;
+    // playAudio: (text: string) => void;
+    onClose: (score: number, duration: number) => void;
+    playAudio: (text: string | string[]) => void;
 }
 
 export const EnglishGame: React.FC<EnglishGameProps> = ({ onClose, playAudio }) => {
@@ -18,8 +20,11 @@ export const EnglishGame: React.FC<EnglishGameProps> = ({ onClose, playAudio }) 
     const [gameState, setGameState] = useState<'loading' | 'active' | 'finished' | 'error'>('loading');
     const [endMessage, setEndMessage] = useState('');
 
+    const startTimeRef = useRef(Date.now()); 
+
     const generateQuiz = useCallback(async () => {
         setGameState('loading');
+        startTimeRef.current = Date.now();
         const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
         if (!apiKey) {
             console.error("Gemini API key is missing.");
@@ -29,25 +34,29 @@ export const EnglishGame: React.FC<EnglishGameProps> = ({ onClose, playAudio }) 
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
         const prompt = "Generate a JSON array of 10 unique quiz questions for a 'letter match' game. Each object must have 'letter', 'correct', and 'options' properties. The two distractor nouns in 'options' MUST NOT start with the question's 'letter'. All words must be for a 5-7 year old. IMPORTANT: Respond ONLY with the raw JSON array, without any surrounding text or markdown formatting.";
         const payload = { contents: [{ parts: [{ text: prompt }] }] };
-        try {
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!response.ok) throw new Error(`API Error: ${response.status}`);
-            const result = await response.json();
-            const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (jsonText) {
-                const cleanedJsonText = jsonText.replace(/^```json\n/, '').replace(/\n```$/, '');
-                const parsedQuestions = JSON.parse(cleanedJsonText);
-                if (Array.isArray(parsedQuestions) && parsedQuestions.length > 0) {
-                    setQuestions(parsedQuestions);
-                    setQuestionIndex(0);
-                    setScore(0);
-                    setFeedback(null);
-                    setGameState('active');
-                } else { throw new Error("Invalid question format received."); }
-            } else { throw new Error("No questions generated in the response."); }
-        } catch (error) {
-            console.error("Failed to generate or parse quiz:", error);
-            setGameState('error');
+
+        const maxRetries = 3;
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const result = await response.json();
+                const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (jsonText) {
+                    const cleanedJsonText = jsonText.replace(/^```json\n/, '').replace(/\n```$/, '');
+                    const parsedQuestions = JSON.parse(cleanedJsonText);
+                    if (Array.isArray(parsedQuestions) && parsedQuestions.length > 0) {
+                        setQuestions(parsedQuestions);
+                        setQuestionIndex(0);
+                        setScore(0);
+                        setFeedback(null);
+                        setGameState('active');
+                    } else { throw new Error("Invalid question format received."); }
+                } else { throw new Error("No questions generated in the response."); }
+            } catch (error) {
+                console.error("Failed to generate or parse quiz:", error);
+                setGameState('error');
+            }
         }
     }, []);
 
@@ -72,6 +81,15 @@ export const EnglishGame: React.FC<EnglishGameProps> = ({ onClose, playAudio }) 
                 setGameState('finished');
             }
         }, 1500);
+    };
+
+
+    const handleGameExit = () => {
+        const endTime = Date.now();
+        const durationSeconds = Math.floor((endTime - startTimeRef.current) / 1000);
+        
+        // Call the updated onClose prop with the required arguments
+        onClose(score, durationSeconds);
     };
 
     const renderGameContent = () => {
@@ -103,5 +121,5 @@ export const EnglishGame: React.FC<EnglishGameProps> = ({ onClose, playAudio }) 
         }
     };
 
-    return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in"><Card className="relative w-full max-w-4xl p-8 text-center min-h-[500px] flex items-center justify-center border-gray-200"><button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-3xl">&times;</button>{renderGameContent()}</Card></div>);
+    return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in"><Card className="relative w-full max-w-4xl p-8 text-center min-h-[500px] flex items-center justify-center border-gray-200"><button onClick={handleGameExit} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-3xl">&times;</button>{renderGameContent()}</Card></div>);
 };

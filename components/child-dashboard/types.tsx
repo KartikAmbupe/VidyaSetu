@@ -1,6 +1,6 @@
 // components/child-dashboard/types.ts
 
-export type View = 'child-home' | 'module-selection' | 'module' | 'game-selection' | 'english-game' | 'maths-game' | 'story-time' | 'interactive-story' | 'read-along-story' | 'quiz-suite';
+export type View = 'child-home' | 'module-selection' | 'module' | 'game-selection' | 'english-game' | 'maths-game' | 'story-time' | 'interactive-story' | 'read-along-story' | 'quiz-suite' | 'locked-screen';
 
 export interface CardData {
     image: string;

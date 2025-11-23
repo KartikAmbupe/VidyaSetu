@@ -6,7 +6,8 @@ import { Card } from "@/components/ui/card";
 import { gameOverMessages } from "../data";
 
 interface MathsGameProps {
-    onClose: () => void;
+    // onClose: () => void;
+    onClose: (score: number, duration: number) => void;
 }
 
 export const MathsGame: React.FC<MathsGameProps> = ({ onClose }) => {
@@ -19,8 +20,11 @@ export const MathsGame: React.FC<MathsGameProps> = ({ onClose }) => {
     const gameAreaRef = useRef<HTMLDivElement>(null);
     const intervalsRef = useRef<NodeJS.Timeout[]>([]);
 
+    const startTimeRef = useRef(Date.now());
+
     const startGame = useCallback(() => {
         setScore(0); setCatchCount(0); setLives(5); setBubbles([]); setGameOver(false);
+        startTimeRef.current = Date.now();
         intervalsRef.current.forEach(clearInterval); intervalsRef.current = [];
         const bubbleInterval = setInterval(() => {
             setBubbles(prev => [...prev, { id: Date.now(), value: Math.ceil(Math.random() * 5), left: `${Math.random() * 90}%`, top: -50 }]);
@@ -49,11 +53,17 @@ export const MathsGame: React.FC<MathsGameProps> = ({ onClose }) => {
         setBubbles(prev => prev.filter(b => b.id !== id));
         setLives(l => l - 1);
     };
+    const handleGameExit = () => {
+        const endTime = Date.now();
+        const durationSeconds = Math.floor((endTime - startTimeRef.current) / 1000);
+        
+        onClose(score, durationSeconds);
+    };
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in">
             <Card className="relative w-full max-w-3xl p-8 text-center overflow-hidden border-gray-200">
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-3xl">&times;</button>
+                <button onClick={handleGameExit} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-3xl">&times;</button>
                 {!gameOver ? (
                     <>
                         <h2 className="text-3xl font-bold text-green-600 mb-2">Number Catch Game</h2>
@@ -72,6 +82,7 @@ export const MathsGame: React.FC<MathsGameProps> = ({ onClose }) => {
                         <p className="text-2xl text-gray-700">Final Score: <span className="font-bold">{score}</span></p>
                         <p className="text-2xl text-gray-700 mb-8">You Caught: <span className="font-bold">{catchCount}</span> bubbles</p>
                         <Button onClick={startGame} className="bg-green-500 text-white py-3 px-8 rounded-xl text-2xl hover:bg-green-600">Play Again</Button>
+                        <Button onClick={handleGameExit} className="bg-blue-500 text-white py-3 px-8 rounded-xl text-xl hover:bg-blue-600">Finish</Button>
                     </div>
                 )}
             </Card>
