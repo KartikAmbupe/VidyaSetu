@@ -27,14 +27,14 @@ export const SubjectSelection: React.FC<{ onSelectSubject: (subjectKey: keyof Su
 );
 
 // --- MODULE SELECTION ---
-export const ModuleSelection: React.FC<{ subject: Subject; onStartModule: (deck: CardData[]) => void; onBack: () => void; }> = ({ subject, onStartModule, onBack }) => (
+export const ModuleSelection: React.FC<{ subject: Subject; onStartModule: (deck: CardData[], moduleTitle: string) => void; onBack: () => void; }> = ({ subject, onStartModule, onBack }) => (
     <div className="max-w-4xl mx-auto px-4 animate-in fade-in duration-500">
         <Button onClick={onBack} className="mb-8 bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2"><ArrowLeft size={16} /> Back to Subjects</Button>
         <h1 className={clsx("text-4xl text-center mb-2 font-bold", subject.textColor)}>{subject.title}</h1>
         <p className="text-xl text-center text-gray-600 mb-12">{subject.description}</p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {subject.modules.map(module => (
-                <Card key={module.title} onClick={() => onStartModule(module.deck)} className={clsx("p-6 h-full flex flex-col justify-between cursor-pointer", subject.borderColor, subject.bgColor, subject.hoverBgColor)}>
+                <Card key={module.title} onClick={() => onStartModule(module.deck, module.title)} className={clsx("p-6 h-full flex flex-col justify-between cursor-pointer", subject.borderColor, subject.bgColor, subject.hoverBgColor)}>
                     <div><h2 className={clsx("text-2xl font-bold mb-2", subject.textColor)}>{module.title}</h2><p className="text-gray-700">{module.description}</p></div>
                     <div className="text-right mt-4 font-bold text-gray-500">Start &rarr;</div>
                 </Card>

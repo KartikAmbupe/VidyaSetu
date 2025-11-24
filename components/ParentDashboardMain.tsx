@@ -72,10 +72,9 @@ export default function ParentDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content Column */}
             <div className="lg:col-span-2 space-y-8">
+              <ActivityLog childId={selectedChild} />
+
               <SessionChart data={sessionData} timeRange={timeRange} setTimeRange={setTimeRange} />
-              
-              {/* NEW: Activity Log (Replaced Focus/Topic Charts) */}
-              <ActivityLog />
 
               <AIInsights suggestions={aiSuggestions} />
             </div>

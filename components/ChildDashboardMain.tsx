@@ -20,6 +20,7 @@ export default function ChildDashboard() {
     const [currentView, setCurrentView] = useState<View>('child-home');
     const [currentDeck, setCurrentDeck] = useState<CardData[]>([]);
     const [selectedSubjectKey, setSelectedSubjectKey] = useState<keyof SubjectsData | null>(null);
+    const [currentModuleInfo, setCurrentModuleInfo] = useState<{ subject: string; moduleName: string } | null>(null);
 
     const CURRENT_CHILD_ID = "654c6014e760c41d117462fa"; 
 
@@ -301,7 +302,7 @@ export default function ChildDashboard() {
         }, 600);
     };
 
-    const handleStartModule = (deck: CardData[]) => {
+    const handleStartModule = (deck: CardData[], moduleTitle: string) => {
         // Start parent timer when learning module starts
         setIsLearningActivityActive(true);
         setIsParentTimerRunning(true);
@@ -311,6 +312,15 @@ export default function ChildDashboard() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ childId: CURRENT_CHILD_ID }),
         }).catch(err => console.error("Failed to start session:", err));
+        
+        // Determine subject name from selectedSubjectKey
+        const subjectName = selectedSubjectKey === 'english' ? 'English Fun' : 'Math Adventures';
+        
+        // Store module info for completion tracking
+        setCurrentModuleInfo({
+            subject: subjectName,
+            moduleName: moduleTitle
+        });
         
         triggerExitAndNavigate('module', () => setCurrentDeck(deck));
     };
@@ -347,6 +357,26 @@ export default function ChildDashboard() {
         
         // Log the activity. We use totalCardsViewed as the 'score' for reporting.
         await logActivity('Learning Module', totalCardsViewed, durationSeconds);
+        
+        // Mark module as completed if we have module info and all cards were viewed
+        if (currentModuleInfo && totalCardsViewed >= currentDeck.length) {
+            try {
+                await fetch("/api/module/complete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        childId: CURRENT_CHILD_ID,
+                        subject: currentModuleInfo.subject,
+                        moduleName: currentModuleInfo.moduleName
+                    }),
+                });
+            } catch (error) {
+                console.error("Failed to mark module as completed:", error);
+            }
+        }
+        
+        // Clear module info
+        setCurrentModuleInfo(null);
         
         // Calculate new time by subtracting the time spent from current timer value
         // Use the ref to get the most current value
